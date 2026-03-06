@@ -8,7 +8,7 @@ pub struct Database {
 }
 
 impl Database {
-    //Initialize a new DB
+    // Initialize a new DB
     pub fn new(path: &str) -> Result<Self, String> {
         let conn = Connection::open(path).unwrap();
         let db = Database { conn: conn };
