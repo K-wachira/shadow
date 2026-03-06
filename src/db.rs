@@ -13,13 +13,13 @@ impl Database {
         let conn = Connection::open(path).unwrap();
         let db = Database { conn: conn };
 
-        db.initialize()?;
-
+        db.initialize_logs()?;
+        db.initialize_ingested_files()?;
         Ok(db)
     }
 
-    //Create table if it does not exist
-    fn initialize(&self) -> Result<(), String> {
+    // Create logs table if it does not exist
+    fn initialize_logs(&self) -> Result<(), String> {
         self.conn
             .execute_batch(
                 "
@@ -30,7 +30,7 @@ impl Database {
             mood INTEGER,
             weather TEXT,
             location TEXT,
-            time_stamp TEXT,
+            time_stamp TEXT NOT NULL,
             device TEXT NOT NULL,
             log_type TEXT
         )",
@@ -41,12 +41,29 @@ impl Database {
         Ok(())
     }
 
-    //Inserts a single log
-    pub fn insert(&self, log: &EntryLog) -> Result<(), rusqlite::Error> {
+    fn initialize_ingested_files(&self) -> Result<(), String> {
+        self.conn
+            .execute_batch(
+                "
+            CREATE TABLE IF NOT EXISTS ingested_files (
+            id    INTEGER PRIMARY KEY,
+            file_name  TEXT NOT NULL,
+            time_stamp TEXT NOT NULL,
+            ingested TEXT
+        )",
+            )
+            .unwrap_or_else(|_| {
+                process::exit(1);
+            });
+        Ok(())
+    }
+
+    // Inserts a single log
+    pub fn insert(&self, log: &RawLog) -> Result<(), rusqlite::Error> {
         self.conn.execute(
             "INSERT INTO shadow_logs (content, energy, mood, weather, location, time_stamp, device, log_type)
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            (&log.content, &log.energy, &log.mood, &log.weather, &log.location, &log.time_stamp, &log.device, &log.log_type),
+            params![&log.content, &log.energy, &log.mood, &log.weather, &log.location, &log.time_stamp, &log.device, &log.log_type],
         )?;
 
         Ok(())
