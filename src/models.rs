@@ -1,13 +1,15 @@
 //From disk (Icloud)
-pub struct EntryLog {
+#[derive(Serialize, Deserialize)]
+pub struct RawLog {
     pub content: String,
-    pub energy: i32,
-    pub mood: i32,
-    pub weather: String,
-    pub location: String,
+    pub energy: Option<i32>,
+    pub mood: Option<i32>,
+    pub weather: Option<String>,
+    pub location: Option<String>,
     pub time_stamp: String,
-    pub device: String,
-    pub log_type: String,
+    pub device: Option<String>,
+    #[serde(rename = "type")]
+    pub log_type: Option<String>,
 }
 
 #[derive(Debug)]
