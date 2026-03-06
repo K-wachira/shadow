@@ -1,6 +1,9 @@
-use crate::models::{DbLog, EntryLog};
+use crate::ingest::process_json_file;
+use crate::models::{EntryLog, FileIngest, RawLog};
 
-use rusqlite::{Connection, Result};
+use std::path::PathBuf;
+use chrono::prelude::*;
+use rusqlite::{Connection, Result, params};
 use std::process;
 
 pub struct Database {
@@ -69,27 +72,101 @@ impl Database {
         Ok(())
     }
 
-    //Fetches all logs
-    pub fn get_logs(&self, limit: Option<usize>) -> Result<Vec<DbLog>, rusqlite::Error> {
+    // Fetches all logs
+    pub fn get_logs(&self, limit: Option<usize>) -> Result<Vec<EntryLog>, rusqlite::Error> {
         let query = match limit {
             Some(n) => format!(
-                "SELECT id, content, energy, mood, weather FROM shadow_logs LIMIT {}", n ),
-            None => "SELECT id, content, energy, mood, weather FROM shadow_logs".to_string(),
+                "SELECT id, content, energy, mood, weather FROM shadow_logs ORDER BY time_stamp DESC LIMIT {}", n ),
+            None => "SELECT id, content, energy, mood, weather FROM shadow_logs ORDER BY time_stamp DESC".to_string(),
         };
-
         let mut stmt = self.conn.prepare(&query)?;
 
-        let logs: Vec<DbLog> = stmt
+        let logs: Vec<EntryLog> = stmt
             .query_map([], |row| {
-                Ok(DbLog {
-                    id: row.get(0)?,
-                    content: row.get(1)?,
-                    energy: row.get(2)?,
-                    mood: row.get(3)?,
-                    weather: row.get(4)?,
+                Ok(EntryLog {
+                    id: row.get::<_, i32>(0)?,
+                    content: row.get::<_, String>(1)?,
+                    energy: row.get::<_, Option<i32>>(2)?,
+                    mood: row.get::<_, Option<i32>>(3)?,
+                    weather: row.get::<_, Option<String>>(4)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
-        return Ok(logs);
+        Ok(logs)
+    }
+
+    // get_range
+
+    // get_recent
+
+    // file_logged ? returns if a file has been previously logged
+    fn file_logged(&self, log_name: &String) -> Result<bool, rusqlite::Error> {
+        let exists = self
+            .conn
+            .query_row(
+                "SELECT id FROM ingested_files WHERE file_name = ?1",
+                [&log_name],
+                |row| row.get::<_, i64>(0),
+            )
+            .is_ok();
+        Ok(exists)
+    }
+
+    pub fn insert_file_ingest(
+        &self,
+        log_name: &String,
+        dir: &PathBuf,
+    ) -> Result<(), rusqlite::Error> {
+        if self.file_logged(&log_name)? {
+            return Ok(());
+        }
+
+        let file_ing = FileIngest {
+            id: None,
+            file_name: log_name.to_string(),
+            time_stamp: Local::now().to_string(),
+            is_ingested: Some(true),
+        };
+        self.conn.execute(
+            "INSERT INTO ingested_files (file_name, time_stamp, ingested)
+                VALUES (?1, ?2, ?3)",
+            params![
+                file_ing.file_name,
+                file_ing.time_stamp,
+                file_ing.is_ingested
+            ],
+        )?;
+
+        match self.insert(&process_json_file(&log_name, &dir).unwrap()) {
+            Ok(_) => {}
+            Err(err) => {
+                println!("Some Error {err} when inserting from file")
+            }
+        }
+        Ok(())
+    }
+
+    pub fn get_file_ingests(
+        &self,
+        limit: Option<usize>,
+    ) -> Result<Vec<FileIngest>, rusqlite::Error> {
+        let query = match limit {
+            Some(n) => format!(
+                "SELECT id, file_name, time_stamp, ingested FROM ingested_files ORDER BY time_stamp DESC LIMIT {}", n ),
+            None => "SELECT id, file_name, time_stamp, ingested FROM ingested_files ORDER BY time_stamp DESC".to_string(),
+        };
+        let mut stmt = self.conn.prepare(&query)?;
+
+        let file_ingests: Vec<FileIngest> = stmt
+            .query_map([], |row| {
+                Ok(FileIngest {
+                    id: row.get::<_, Option<i32>>(0)?,
+                    file_name: row.get::<_, String>(1)?,
+                    time_stamp: row.get::<_, String>(2)?,
+                    is_ingested: None,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(file_ingests)
     }
 }

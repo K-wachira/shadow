@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 //From disk (Icloud)
 #[derive(Serialize, Deserialize)]
 pub struct RawLog {
