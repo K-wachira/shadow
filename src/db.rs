@@ -68,7 +68,6 @@ impl Database {
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![&log.content, &log.energy, &log.mood, &log.weather, &log.location, &log.time_stamp, &log.device, &log.log_type],
         )?;
-
         Ok(())
     }
 
