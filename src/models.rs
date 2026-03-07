@@ -28,5 +28,5 @@ pub struct FileIngest {
     pub id: Option<i32>,
     pub file_name: String,
     pub time_stamp: String,
-    pub is_ingested: Option<bool
+    pub is_ingested: Option<bool>
 }
