@@ -16,14 +16,18 @@ fn main() -> Result<()> {
 
     let _ = file_ingest(&conn, &dir);
 
-    // Fetch and display
-    // for file in conn.get_file_ingests(None)? {
-    //     println!("File: {:?} {:?}", file.id, file.file_name);
-    // }
+                }
+            };
+        }
+        
+        Commands::Log { content } => {
+            match content {
+                Some(new_log)  => {
+                    info!("New Log {}", new_log );
 
-    // for log in conn.get_logs(None)?{
-    //     println!("Log: {:?}",log);
-    // }
+                }
+                None => {
+                    info!("No Log");
 
     Ok(())
 }
