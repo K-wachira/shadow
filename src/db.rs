@@ -12,7 +12,7 @@ pub struct Database {
 
 impl Database {
     // Initialize a new DB
-    pub fn new(path: &str) -> Result<Self, String> {
+    pub fn new(path: &str) -> color_eyre::Result<Self, String> {
         let conn = Connection::open(path).unwrap();
         let db = Database { conn: conn };
 
@@ -22,7 +22,7 @@ impl Database {
     }
 
     // Create logs table if it does not exist
-    fn initialize_logs(&self) -> Result<(), String> {
+    fn initialize_logs(&self) -> color_eyre::Result<(), String> {
         self.conn
             .execute_batch(
                 "
@@ -44,7 +44,7 @@ impl Database {
         Ok(())
     }
 
-    fn initialize_ingested_files(&self) -> Result<(), String> {
+    fn initialize_ingested_files(&self) -> color_eyre::Result<(), String> {
         self.conn
             .execute_batch(
                 "
