@@ -147,9 +147,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_file_ingests(
-        &self,
-        limit: Option<usize>,
+    pub fn get_file_ingests(&self, limit: Option<usize>,
     ) -> Result<Vec<FileIngest>, rusqlite::Error> {
         let query = match limit {
             Some(n) => format!(
