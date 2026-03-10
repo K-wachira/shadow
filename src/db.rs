@@ -90,6 +90,10 @@ impl Database {
                     energy: row.get::<_, Option<i32>>(2)?,
                     mood: row.get::<_, Option<i32>>(3)?,
                     weather: row.get::<_, Option<String>>(4)?,
+                    location: row.get::<_, Option<String>>(5)?,
+                    time_stamp: row.get::<_, String>(6)?,
+                    device: row.get::<_, String>(7)?,
+                    log_type: row.get::<_, Option<String>>(8)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
