@@ -141,7 +141,7 @@ impl Database {
         match self.insert(&process_json_file(&log_name, &dir).unwrap()) {
             Ok(_) => {}
             Err(err) => {
-                println!("Some Error {err} when inserting from file")
+                error!("Some Error {err} when inserting from file")
             }
         }
         Ok(())
