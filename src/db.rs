@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use chrono::prelude::*;
 use rusqlite::{Connection, Result, params};
 use std::process;
+use tracing::{ error };
+
 
 pub struct Database {
     conn: Connection,
