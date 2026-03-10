@@ -24,5 +24,19 @@ impl LlmClient {
             Err(err) =>Err(err)   
         }
     }
-
+    
+    pub async fn ollama_ask_stream(
+        &self, 
+        prompt: &String
+    ) -> Result<impl Stream<Item = Result<Vec<GenerationResponse>, OllamaError>>, OllamaError> {
+        let model = "gemma3:12b".to_string();
+        
+        // The library returns a Result<LlamaStream, OllamaError>
+        // LlamaStream implements Stream<Item = Result<Vec<GenerationResponse>, OllamaError>>
+        let stream = self.llm
+            .generate_stream(GenerationRequest::new(model, prompt.clone()))
+            .await?;
+    
+        Ok(stream)
+    }
 }    
