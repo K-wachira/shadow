@@ -117,11 +117,7 @@ impl Database {
         Ok(exists)
     }
 
-    pub fn insert_file_ingest(
-        &self,
-        log_name: &String,
-        dir: &PathBuf,
-    ) -> Result<(), rusqlite::Error> {
+    pub fn insert_file_ingest(&self, log_name: &String, dir: &PathBuf) -> Result<(), rusqlite::Error> {
         if self.file_logged(&log_name)? {
             return Ok(());
         }
