@@ -74,7 +74,7 @@ impl Database {
     }
 
     // Fetches all logs
-    pub fn get_logs(&self, limit: Option<usize>) -> Result<Vec<EntryLog>, rusqlite::Error> {
+    pub fn get_logs(&self, limit: Option<i32>) -> Result<Vec<EntryLog>, rusqlite::Error> {
         let query = match limit {
             Some(n) => format!(
                 "SELECT id, content, energy, mood, weather FROM shadow_logs ORDER BY time_stamp DESC LIMIT {}", n ),
