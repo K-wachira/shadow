@@ -1,10 +1,25 @@
+mod ask;
+mod commands;
 mod db;
+mod handlers;
 mod ingest;
 mod models;
+mod ollama;
+mod tui;
 
+use ask::ask;
+use clap::Parser;
+use commands::Args;
+use commands::Commands;
 use db::Database;
-use ingest::file_ingest;
-use models::RawLog;
+use handlers::handle_ask;
+use handlers::handle_ingests;
+use handlers::handle_log;
+use handlers::handle_recent;
+use handlers::handle_stats;
+use ollama::LlmClient;
+use tracing_subscriber;
+use tui::run;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
