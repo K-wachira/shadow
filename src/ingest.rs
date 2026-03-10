@@ -25,7 +25,7 @@ pub fn file_ingest(conn: &Database, dir: &PathBuf) -> Result<(), String> {
                 // let _ = conn.insert(&process_json_file(&file_name, &dir)?);
             }
         }
-        Err(e) => println!("ERROR: {}", e),
+        Err(e) => error!("Failed: {}", e),
     }
     Ok(())
 }
