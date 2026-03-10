@@ -3,6 +3,7 @@ use crate::models::RawLog;
 
 use std::fs;
 use std::path::PathBuf;
+use tracing::{ error };
 
 pub fn process_json_file(log_name: &String, dir: &PathBuf) -> Result<RawLog, String> {
     let complete_path = dirs::home_dir()
