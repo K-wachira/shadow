@@ -6,13 +6,10 @@ use db::Database;
 use ingest::file_ingest;
 use models::RawLog;
 
-use rusqlite::Result;
-
-fn main() -> Result<()> {
-    let conn = Database::new("data/shadow_logs.db").unwrap();
-    let dir = dirs::home_dir()
-        .unwrap()
-        .join("Library/Mobile Documents/com~apple~CloudDocs/ShadowLogs/");
+#[tokio::main]
+async fn main() -> color_eyre::Result<()> {
+    cli_main().await
+}
 
 async fn cli_main() -> color_eyre::Result<()> {
     color_eyre::install()?;
