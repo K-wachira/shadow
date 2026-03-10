@@ -77,8 +77,8 @@ impl Database {
     pub fn get_logs(&self, limit: Option<i32>) -> Result<Vec<EntryLog>, rusqlite::Error> {
         let query = match limit {
             Some(n) => format!(
-                "SELECT id, content, energy, mood, weather FROM shadow_logs ORDER BY time_stamp DESC LIMIT {}", n ),
-            None => "SELECT id, content, energy, mood, weather FROM shadow_logs ORDER BY time_stamp DESC".to_string(),
+                "SELECT id, content, energy, mood, weather, location, time_stamp, device, log_type FROM shadow_logs ORDER BY time_stamp DESC LIMIT {}", n ),
+            None => "SELECT id, content, energy, mood, weather, location, time_stamp, device, log_type FROM shadow_logs ORDER BY time_stamp DESC".to_string(),
         };
         let mut stmt = self.conn.prepare(&query)?;
 
