@@ -100,10 +100,6 @@ impl Database {
         Ok(logs)
     }
 
-    // get_range
-
-    // get_recent
-
     // file_logged ? returns if a file has been previously logged
     fn file_logged(&self, log_name: &String) -> Result<bool, rusqlite::Error> {
         let exists = self
