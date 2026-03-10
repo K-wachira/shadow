@@ -11,3 +11,12 @@ pub fn ask(query: &String, conn: &Database) -> Result<String, String>{
     Ok(results)
 }
 
+fn build_prompt(context: &str, query: &str) -> String {
+    format!(
+        "You are Shadow, a personal assistant with access to the user's logs. 
+         Context:\n{}\n\n\
+         Question: {}",
+        context, query
+    )
+}
+
