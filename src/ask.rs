@@ -20,3 +20,14 @@ fn build_prompt(context: &str, query: &str) -> String {
     )
 }
 
+fn format_context(logs: Vec<EntryLog>) -> String {
+    logs.iter()
+        .map(|log| {
+            format!(
+                "[{}] {}\nMood: {:?} | Energy: {:?} | Weather: {:?} | Location: {:?}",
+                log.time_stamp, log.content, log.mood, log.energy, log.weather, log.location
+            )
+        })
+        .collect::<Vec<String>>()
+        .join("\n\n")
+}
