@@ -21,6 +21,10 @@ pub struct EntryLog {
     pub energy: Option<i32>, 
     pub mood: Option<i32>,
     pub weather: Option<String>,
+    pub location: Option<String>,
+    pub time_stamp: String,
+    pub device: String,
+    pub log_type: Option<String>
 }
 
 #[derive(Debug)]
