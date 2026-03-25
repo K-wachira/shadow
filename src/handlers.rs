@@ -6,8 +6,10 @@ use crate::ollama::LlmClient;
 use tokio_stream::StreamExt;
 use tracing::error;
 use tracing::info;
+use std::sync::Arc;
 
-pub async fn handle_ask(db_conn: &Database, ollama_conn: LlmClient, query: Option<String>) {
+
+pub async fn handle_ask(db_conn: &Database, ollama_conn: Arc<LlmClient>, query: Option<String>) {
     match query {
         Some(text) => {
             info!("Question: {}", text);

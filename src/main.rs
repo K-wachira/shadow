@@ -20,6 +20,7 @@ use handlers::handle_stats;
 use ollama::LlmClient;
 use tracing_subscriber;
 use tui::run;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -30,7 +31,8 @@ async fn cli_main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     tracing_subscriber::fmt::init();
     let db_conn = Database::new("data/shadow_logs.db").map_err(|e| color_eyre::eyre::eyre!(e))?;
-    let ollama_conn = LlmClient::init().map_err(|e| color_eyre::eyre::eyre!(e))?;
+    let ollama_conn = Arc::new(LlmClient::init().map_err(|e| color_eyre::eyre::eyre!(e))?);
+    
     let args = Args::parse();
 
     match args.command {
