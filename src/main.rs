@@ -46,7 +46,7 @@ async fn cli_main() -> color_eyre::Result<()> {
             let terminal = ratatui::init();
             let result = run(terminal, ollama_conn, &db_conn).await;
             ratatui::restore();
-            return result.await;
+            result?;
         }
     }
 
