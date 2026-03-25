@@ -1,10 +1,4 @@
-use crate::ask::ask;
-use crate::db::Database;
-use crate::ollama::LlmClient;
-use crate::tui::AppState;
-use crate::tui::AssistantState;
-use crate::tui::Message;
-use crate::tui::MessageKind;
+use crate::tui::TuiAppState;
 use crate::tui::render;
 use crossterm::event::Event;
 use crossterm::event::KeyCode;
@@ -12,20 +6,23 @@ use crossterm::event::{self};
 use ratatui::DefaultTerminal;
 use ratatui::widgets::Block;
 use ratatui_textarea::TextArea;
-use std::sync::Arc;
+use shadow_core::engine::ShadowEngine;
+use shadow_core::model::AssistantState;
+use shadow_core::model::Message;
+use shadow_core::model::MessageKind;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 
 pub async fn run(
     mut terminal: DefaultTerminal,
-    ollama_conn: Arc<LlmClient>,
-    db_conn: &Database,
+    shadow_engine: &mut ShadowEngine,
 ) -> color_eyre::Result<()> {
+    
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
     let (done_tx, mut done_rx) = mpsc::unbounded_channel::<()>();
 
-    let mut app_state = AppState::default();
+    let mut app_state = TuiAppState::default();
     let mut input_buf = String::new();
     let tick_rate = Duration::from_millis(100);
     let mut last_tick = Instant::now();
@@ -35,19 +32,20 @@ pub async fn run(
 
     let mut textarea = TextArea::default();
     textarea.set_block(Block::bordered().title(" input "));
-    app_state.session_id = db_conn.create_session("Shadow Session", &app_state.model)?;
+    let session_name = "Shadow Session";
+    let _ = shadow_engine.start_session(&session_name);
 
     loop {
         while let Ok(chunk) = rx.try_recv() {
             let chunk = chunk.replace("\\n", "\n"); // clean here
-            match app_state.messages.last_mut() {
+            match shadow_engine.messages.last_mut() {
                 Some(Message {
                     kind: MessageKind::AssistantText { text },
                     ..
                 }) => {
                     text.push_str(&chunk);
                 }
-                _ => app_state.messages.push(Message::agent(chunk)),
+                _ => shadow_engine.messages.push(Message::agent(chunk)),
             }
             if app_state.auto_scroll {
                 app_state.scroll_offset = 0;
@@ -55,22 +53,15 @@ pub async fn run(
         }
 
         if done_rx.try_recv().is_ok() {
-            app_state.assistant_state = AssistantState::Idle;
-            stream_start = None;
-
-            // get the last assistant message and store it
             if let Some(Message {
                 kind: MessageKind::AssistantText { text },
                 ..
-            }) = app_state.messages.last()
+            }) = shadow_engine.messages.last()
             {
-                db_conn.insert_message(
-                    app_state.session_id,
-                    "assistant",
-                    text,
-                    Some(&app_state.model),
-                )?;
+                shadow_engine.on_stream_complete(&text.clone())?;
             }
+            app_state.assistant_state = AssistantState::Idle;
+            stream_start = None;
         }
 
         if last_tick.elapsed() >= tick_rate {
@@ -85,7 +76,7 @@ pub async fn run(
         app_state.input = input_buf.clone();
         app_state.cursor_pos = input_buf.chars().count();
 
-        terminal.draw(|f| render(f, &app_state))?;
+        terminal.draw(|f| render(f, &app_state, shadow_engine))?;
 
         if !event::poll(Duration::from_millis(16))? {
             continue;
@@ -124,30 +115,30 @@ pub async fn run(
                             .unwrap_or_else(|| app_state.model.clone());
                         let selected_title = selected.title.clone();
 
-                        match db_conn.get_session_messages(selected_id) {
+                        match shadow_engine.load_session(selected_id) {
                             Ok(messages) => {
                                 // clear current conversation
 
-                                app_state.messages.clear();
-                                app_state.messages.push(Message::logo());
+                                shadow_engine.messages.clear();
+                                shadow_engine.messages.push(Message::logo());
 
                                 // load messages back into conversation
                                 for msg in messages {
                                     match msg.role.as_str() {
                                         "user" => {
-                                            app_state.messages.push(Message::user(msg.content))
+                                            shadow_engine.messages.push(Message::user(msg.content))
                                         }
                                         "assistant" => {
-                                            app_state.messages.push(Message::agent(msg.content))
+                                            shadow_engine.messages.push(Message::agent(msg.content))
                                         }
                                         _ => {}
                                     }
                                 }
 
                                 // update session state
-                                app_state.session_id = selected_id;
-                                app_state.session_name = Some(selected_title);
-                                app_state.model = selected_model;
+                                shadow_engine.session_id = selected_id;
+                                shadow_engine.session_name = selected_title.clone();
+                                shadow_engine.model = selected_model.clone();
 
                                 // exit history mode, scroll to bottom
                                 app_state.history_mode = false;
@@ -167,7 +158,7 @@ pub async fn run(
                         input_buf.clear();
 
                         if cmd == "/history" {
-                            match db_conn.get_recent_sessions(20) {
+                            match shadow_engine.list_sessions(20) {
                                 Ok(sessions) => {
                                     app_state.history_sessions = sessions;
                                     app_state.history_mode = true;
@@ -182,31 +173,22 @@ pub async fn run(
                             continue;
                         }
 
-                        app_state.messages.push(Message::user(prompt.clone()));
-                        db_conn.insert_message(app_state.session_id, "user", &prompt, None)?;
                         input_buf.clear();
-
                         stream_start = Some(Instant::now());
 
                         let tx = tx.clone();
                         let done_tx = done_tx.clone();
-                        let ollama = Arc::clone(&ollama_conn);
 
-                        match ask(&prompt, db_conn) {
-                            Ok(enriched_prompt) => {
+                        let stream_result = shadow_engine.send_message(&prompt).await;
+
+                        match stream_result {
+                            Ok(stream) => {
+                                let mut stream = Box::pin(stream);
                                 tokio::spawn(async move {
-                                    if let Ok(mut stream) =
-                                        ollama.ollama_ask_stream(&enriched_prompt).await
-                                    {
-                                        while let Some(chunk) = stream.next().await {
-                                            if let Ok(res) = chunk {
-                                                for r in res {
-                                                    let _ = tx.send(r.response);
-                                                }
-                                            }
-                                        }
+                                    while let Some(chunk) = stream.next().await {
+                                        let _ = tx.send(chunk);
                                     }
-                                    let _ = done_tx.send(()); // stream is done
+                                    let _ = done_tx.send(());
                                 });
                             }
                             Err(_) => {}
@@ -274,7 +256,7 @@ pub async fn run(
         }
     }
 
-    db_conn.end_session(app_state.session_id)?;
+    let _ = shadow_engine.end_session();
     app_state.assistant_state = AssistantState::Idle;
     Ok(())
 }

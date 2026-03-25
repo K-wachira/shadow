@@ -8,6 +8,7 @@ pub struct LlmClient {
     llm: Ollama,
 }
 
+#[allow(dead_code)]
 impl LlmClient {
     pub fn init() -> Result<Self, String> {
         let ollama = Ollama::new("http://localhost".to_string(), 11434);
@@ -31,8 +32,6 @@ impl LlmClient {
     ) -> Result<impl Stream<Item = Result<Vec<GenerationResponse>, OllamaError>>, OllamaError> {
         let model = "deepseek-r1:latest".to_string();
         
-        // The library returns a Result<LlamaStream, OllamaError>
-        // LlamaStream implements Stream<Item = Result<Vec<GenerationResponse>, OllamaError>>
         let stream = self.llm
             .generate_stream(GenerationRequest::new(model, prompt.clone()))
             .await?;

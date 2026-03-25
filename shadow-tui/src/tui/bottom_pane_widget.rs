@@ -1,29 +1,30 @@
-use crate::tui::AppState;
+use crate::tui::TuiAppState;
 use crate::tui::SLASH_COMMANDS;
 use crate::tui::SlashCommand;
 use crate::tui::bright;
 use crate::tui::dim;
-use ratatui::{
-    Frame,
-    layout:: Rect,
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::Paragraph,
-};
+use ratatui::Frame;
+use ratatui::layout::Rect;
+use ratatui::style::Color;
+use ratatui::style::Modifier;
+use ratatui::style::Style;
+use ratatui::text::Line;
+use ratatui::text::Span;
+use ratatui::widgets::Paragraph;
 
-pub fn render_bottom_pane(f: &mut Frame, area: Rect, state: &AppState) {
-    if state.slash_mode {
-        render_slash_picker(f, area, state);
+pub fn render_bottom_pane(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
+    if tui_state.slash_mode {
+        render_slash_picker(f, area, tui_state);
         return;
     }
 
     // normal statusbar
-    let left = match &state.session_name {
+    let left = match &tui_state.session_name {
         Some(name) => format!("~ [{}]", name),
         None => "~".to_string(),
     };
 
-    let right = format!("{}  100% left", state.model);
+    let right = format!("{}  100% left", tui_state.model);
     let padding = area.width.saturating_sub((left.len() + right.len()) as u16);
 
     let line = Line::from(vec![
@@ -35,9 +36,9 @@ pub fn render_bottom_pane(f: &mut Frame, area: Rect, state: &AppState) {
     f.render_widget(Paragraph::new(line), area);
 }
 
-fn render_slash_picker(f: &mut Frame, area: Rect, state: &AppState) {
+fn render_slash_picker(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
     // filter commands by what's been typed
-    let input = state.slash_input.trim_start_matches('/').to_lowercase();
+    let input = tui_state.slash_input.trim_start_matches('/').to_lowercase();
 
     let matching: Vec<&SlashCommand> = SLASH_COMMANDS
         .iter()
@@ -61,7 +62,7 @@ fn render_slash_picker(f: &mut Frame, area: Rect, state: &AppState) {
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw("  "),
-        Span::styled(cmd.description, dim()),
+        Span::styled(cmd.description, dim() as Style),
     ]);
 
     f.render_widget(Paragraph::new(line), area);

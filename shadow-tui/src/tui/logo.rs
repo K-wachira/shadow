@@ -1,8 +1,10 @@
-use ratatui::{
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-};
+use ratatui::style::Color;
+use ratatui::style::Modifier;
+use ratatui::style::Style;
+use ratatui::text::Line;
+use ratatui::text::Span;
 
+#[allow(unused_variables)]
 pub fn logo_lines() -> Vec<Line<'static>> {
     let border_color = Style::default().fg(Color::Rgb(70, 70, 80));
     let label_style = Style::default().fg(Color::DarkGray);

@@ -1,33 +1,39 @@
-use ratatui::{
-    Frame,
-    layout::{Rect},
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Wrap},
-};
-use crate::tui::AppState;
-use crate::tui::Message;
-use crate::tui::MessageKind;
-use crate::tui::ToolCall;
-use crate::tui::ToolState;
+use shadow_core::model::Message;
+use shadow_core::model::MessageKind;
+use shadow_core::model::ToolCall;
+use shadow_core::model::ToolState;
+
+use crate::tui::TuiAppState;
 use crate::tui::bright_bold;
 use crate::tui::default;
 use crate::tui::dim;
+use crate::tui::logo_lines;
 use crate::tui::markdown_to_lines;
 use crate::tui::muted;
 use crate::tui::very_dim;
-use crate::tui::logo_lines;
+use ratatui::Frame;
+use ratatui::layout::Rect;
+use ratatui::style::Color;
+use ratatui::style::Modifier;
+use ratatui::style::Style;
+use ratatui::text::Line;
+use ratatui::text::Span;
+use ratatui::widgets::Block;
+use ratatui::widgets::Borders;
+use ratatui::widgets::Paragraph;
+use ratatui::widgets::Wrap;
+use shadow_core::engine::ShadowEngine;
 
-pub fn render_chat(f: &mut Frame, area: Rect, state: &AppState) {
-    if state.history_mode {
-        render_session_list(f, area, state);
+pub fn render_chat(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine) {
+    if tui_state.history_mode {
+        render_session_list(f, area, tui_state, shadow_engine);
         return;
     }
 
     let mut all_lines: Vec<Line> = vec![];
 
-    for msg in &state.messages {
-        let mut lines = message_to_lines(msg, state.tick);
+    for msg in &shadow_engine.messages {
+        let mut lines = message_to_lines(msg, tui_state.tick);
         all_lines.append(&mut lines);
         // Blank line after each top-level message for breathing room
         if msg.indent == 0 {
@@ -56,10 +62,10 @@ pub fn render_chat(f: &mut Frame, area: Rect, state: &AppState) {
     let total_visual: usize = visual_lines.iter().map(|(r, _)| r).sum();
     let max_scroll = total_visual.saturating_sub(height);
 
-    let skip_visual = if state.auto_scroll {
+    let skip_visual = if tui_state.auto_scroll {
         max_scroll
     } else {
-        let offset = state.scroll_offset.min(max_scroll);
+        let offset = tui_state.scroll_offset.min(max_scroll);
         max_scroll.saturating_sub(offset)
     };
 
@@ -103,7 +109,7 @@ fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
             if let Some(first) = lines.first_mut() {
                 first
                     .spans
-                    .insert(0, Span::styled(format!("{}›  ", pad), default()));
+                    .insert(0, Span::styled(format!("{}›  ", pad), default() ));
             }
             lines
         }
@@ -111,15 +117,16 @@ fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
     }
 }
 
-fn render_session_list(f: &mut Frame, area: Rect, state: &AppState) {
-    if state.history_sessions.is_empty() {
+fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine ) {
+   let history_sessions = shadow_engine.list_sessions(10).unwrap(); //TODO Handle error case
+    if history_sessions.is_empty() {
         let line = Line::from(Span::styled("  no sessions found", dim()));
         f.render_widget(Paragraph::new(line), area);
         return;
+
     }
 
-    let items: Vec<Line> = state
-        .history_sessions
+    let items: Vec<Line> = history_sessions
         .iter()
         .enumerate()
         .map(|(i, session)| {
@@ -133,7 +140,7 @@ fn render_session_list(f: &mut Frame, area: Rect, state: &AppState) {
                 session.title.clone()
             };
 
-            if i == state.history_cursor {
+            if i == tui_state.history_cursor {
                 Line::from(vec![
                     Span::raw("  "),
                     Span::styled(
@@ -152,6 +159,7 @@ fn render_session_list(f: &mut Frame, area: Rect, state: &AppState) {
             }
         })
         .collect();
+    
 
     f.render_widget(
         Paragraph::new(items).block(
@@ -168,7 +176,7 @@ fn render_session_list(f: &mut Frame, area: Rect, state: &AppState) {
 }
 
 fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {
-    let mut lines = vec![];
+    let mut lines: Vec<Line<'static>> = vec![];
 
     match &tool.state {
         ToolState::Running => {
@@ -184,7 +192,7 @@ fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {
                     format!("{}{}  ", pad, sp),
                     Style::default().fg(Color::Yellow),
                 ),
-                Span::styled(tool.name.clone(), bright_bold()),
+                Span::styled(tool.name.to_owned(), bright_bold()),
                 Span::styled("  (ctrl+f to focus)".to_string(), dim()),
             ]));
             // Show last live stdout line if streaming
@@ -192,7 +200,7 @@ fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {
                 lines.push(Line::from(vec![
                     Span::styled(format!("{}└  ", pad), dim()),
                     Span::styled(
-                        last.clone(),
+                        last.to_owned(),
                         Style::default()
                             .fg(Color::Green)
                             .add_modifier(Modifier::DIM),
@@ -228,7 +236,7 @@ fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {
             for output_line in &tool.output_lines {
                 lines.push(Line::from(vec![
                     Span::styled(format!("{}└  ", pad), dim()),
-                    Span::styled(output_line.clone(), muted()),
+                    Span::styled(output_line.to_owned(), muted()),
                 ]));
             }
         }
