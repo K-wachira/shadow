@@ -21,6 +21,7 @@ use ollama::LlmClient;
 use tracing_subscriber;
 use tui::run;
 use std::sync::Arc;
+use tui::run;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
