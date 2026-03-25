@@ -1,19 +1,20 @@
-use crate::tui::AppState;
+use crate::tui::TuiAppState;
 use crate::tui::render_bottom_pane;
 use crate::tui::render_chat;
 use crate::tui::render_input;
 use crate::tui::render_status_line;
 use crate::tui::render_yolo_hint;
-use ratatui::{
-    Frame,
-    layout::{Constraint, Direction, Layout},
-};
 
+use ratatui::Frame;
+use ratatui::layout::Constraint;
+use ratatui::layout::Direction;
+use ratatui::layout::Layout;
+use shadow_core::engine::ShadowEngine;
 
 // ─── Root render ─────────────────────────────────────────────────────────────
 
 /// Call once per frame from your event loop.
-pub fn render(f: &mut Frame, state: &AppState) {
+pub fn render(f: &mut Frame, tui_state: &TuiAppState,   shadow_engine: &mut ShadowEngine) {
     // Layout — fixed rows from bottom, history fills the rest:
     //
     //  ┌──────────────────────────────────┐
@@ -39,9 +40,9 @@ pub fn render(f: &mut Frame, state: &AppState) {
         ])
         .split(f.area());
 
-    render_chat(f, chunks[0], state);
-    render_status_line(f, chunks[1], state);
-    render_yolo_hint(f, chunks[2], state);
-    render_input(f, chunks[3], state);
-    render_bottom_pane(f, chunks[4], state);
+    render_chat(f, chunks[0], tui_state, shadow_engine);
+    render_status_line(f, chunks[1], tui_state);
+    render_yolo_hint(f, chunks[2], tui_state);
+    render_input(f, chunks[3], tui_state);
+    render_bottom_pane(f, chunks[4], tui_state);
 }

@@ -1,4 +1,4 @@
-use crate::ask;
+use crate::ask::ask;
 use crate::db::Database;
 use crate::ingest::file_ingest;
 use crate::ollama::LlmClient;

@@ -1,8 +1,14 @@
-use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
-use ratatui::{
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-};
+use pulldown_cmark::Event;
+use pulldown_cmark::HeadingLevel;
+use pulldown_cmark::Options;
+use pulldown_cmark::Parser;
+use pulldown_cmark::Tag;
+use pulldown_cmark::TagEnd;
+use ratatui::style::Color;
+use ratatui::style::Modifier;
+use ratatui::style::Style;
+use ratatui::text::Line;
+use ratatui::text::Span;
 
 pub fn markdown_to_lines(markdown: &str) -> Vec<Line<'static>> {
     let mut options = Options::empty();

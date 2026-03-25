@@ -1,17 +1,18 @@
 use crate::tui::dim;
 use crate::tui::bright;
+use crate::tui::TuiAppState;
+use ratatui::Frame;
+use ratatui::layout::Rect;
+use ratatui::style::Color;
+use ratatui::style::Modifier;
+use ratatui::style::Style;
+use ratatui::text::Line;
+use ratatui::text::Span;
+use ratatui::widgets::Paragraph;
 
-use crate::tui::AppState;
-use ratatui::{
-    Frame,
-    layout::Rect,
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::Paragraph,
-};
 
-pub fn render_input(f: &mut Frame, area: Rect, state: &AppState) {
-    let prefix = state.assistant_state.input_prefix();
+pub fn render_input(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
+    let prefix = tui_state.assistant_state.input_prefix();
     let cursor = Span::styled(
         "█",
         Style::default()
@@ -20,7 +21,7 @@ pub fn render_input(f: &mut Frame, area: Rect, state: &AppState) {
             .add_modifier(Modifier::SLOW_BLINK),
     );
 
-    let line = if state.input.is_empty() {
+    let line = if tui_state.input.is_empty() {
         Line::from(vec![
             Span::styled(format!("{} ", prefix), dim()),
             cursor,
@@ -28,14 +29,14 @@ pub fn render_input(f: &mut Frame, area: Rect, state: &AppState) {
             Span::styled("Type your message", dim()),
         ])
     } else {
-        let byte_idx = state
+        let byte_idx = tui_state
             .input
             .char_indices()
-            .nth(state.cursor_pos)
+            .nth(tui_state.cursor_pos)
             .map(|(i, _)| i)
-            .unwrap_or(state.input.len());
-        let before = state.input[..byte_idx].to_string();
-        let after = state.input[byte_idx..].to_string();
+            .unwrap_or(tui_state.input.len());
+        let before = tui_state.input[..byte_idx].to_string();
+        let after = tui_state.input[byte_idx..].to_string();
 
         Line::from(vec![
             Span::styled(format!("{} ", prefix), dim()),
