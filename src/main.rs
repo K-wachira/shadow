@@ -3,7 +3,6 @@ mod commands;
 mod db;
 mod handlers;
 mod ingest;
-mod models;
 mod ollama;
 mod tui;
 mod run_layout;
