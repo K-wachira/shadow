@@ -19,7 +19,6 @@ use handlers::handle_recent;
 use handlers::handle_stats;
 use ollama::LlmClient;
 use tracing_subscriber;
-use tui::run;
 use std::sync::Arc;
 use tui::run;
 
