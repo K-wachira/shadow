@@ -167,3 +167,95 @@ fn render_session_list(f: &mut Frame, area: Rect, state: &AppState) {
     );
 }
 
+fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {
+    let mut lines = vec![];
+
+    match &tool.state {
+        ToolState::Running => {
+            // Spinning: "⠋ Shell  (ctrl+f to focus)"
+            let sp = match tick % 4 {
+                0 => "⠋",
+                1 => "⠙",
+                2 => "⠹",
+                _ => "⠸",
+            };
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("{}{}  ", pad, sp),
+                    Style::default().fg(Color::Yellow),
+                ),
+                Span::styled(tool.name.clone(), bright_bold()),
+                Span::styled("  (ctrl+f to focus)".to_string(), dim()),
+            ]));
+            // Show last live stdout line if streaming
+            if let Some(last) = tool.output_lines.last() {
+                lines.push(Line::from(vec![
+                    Span::styled(format!("{}└  ", pad), dim()),
+                    Span::styled(
+                        last.clone(),
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::DIM),
+                    ),
+                ]));
+            }
+        }
+
+        ToolState::Collapsed => {
+            // "● Shell(python3 -c "…") (3 lines)  (Ctrl+O to expand)"
+            let n = tool.output_lines.len();
+            let word = if n == 1 { "line" } else { "lines" };
+            let preview = if tool.args_preview.is_empty() {
+                String::new()
+            } else {
+                format!("({})", truncate(&tool.args_preview, 48))
+            };
+            lines.push(Line::from(vec![
+                Span::styled(format!("{}●  ", pad), Style::default().fg(Color::Green)),
+                Span::styled(format!("{}{}", tool.name, preview), muted()),
+                Span::styled(format!("  ({} {})", n, word), dim()),
+                Span::styled("  (Ctrl+O to expand)".to_string(), very_dim()),
+            ]));
+        }
+
+        ToolState::Expanded => {
+            // "● Shell"
+            // "└  $ mkdir -p /path"
+            lines.push(Line::from(vec![
+                Span::styled(format!("{}●  ", pad), Style::default().fg(Color::Green)),
+                Span::styled(tool.name.clone(), bright_bold()),
+            ]));
+            for output_line in &tool.output_lines {
+                lines.push(Line::from(vec![
+                    Span::styled(format!("{}└  ", pad), dim()),
+                    Span::styled(output_line.clone(), muted()),
+                ]));
+            }
+        }
+    }
+
+    // Children (Worker pattern):
+    // └  ✓ Shell(mkdir -p ...)
+    for child in &tool.children {
+        let check = if child.completed { "✓ " } else { "" };
+        let preview = if child.args_preview.is_empty() {
+            String::new()
+        } else {
+            format!("({})", truncate(&child.args_preview, 40))
+        };
+        lines.push(Line::from(vec![
+            Span::styled(format!("{}└  ", pad), dim()),
+            Span::styled(format!("{}{}{}", check, child.name, preview), dim()),
+        ]));
+    }
+    lines
+}
+
+// ─── Utility ─────────────────────────────────────────────────────────────────
+fn truncate(s: &str, max: usize) -> String {
+    if s.chars().count() <= max {
+        s.to_string()
+    } else {
+        format!("{}…", s.chars().take(max).collect::<String>())
+    }
+}
