@@ -44,7 +44,7 @@ async fn cli_main() -> color_eyre::Result<()> {
         None => {
             // no command passed → launch TUI
             let terminal = ratatui::init();
-            let result = run(terminal, ollama_conn);
+            let result = run(terminal, ollama_conn, &db_conn).await;
             ratatui::restore();
             return result.await;
         }
