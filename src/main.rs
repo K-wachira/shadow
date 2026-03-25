@@ -6,6 +6,8 @@ mod ingest;
 mod models;
 mod ollama;
 mod tui;
+mod run_layout;
+mod shadow_layout;
 
 use ask::ask;
 use clap::Parser;
