@@ -111,3 +111,59 @@ fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
     }
 }
 
+fn render_session_list(f: &mut Frame, area: Rect, state: &AppState) {
+    if state.history_sessions.is_empty() {
+        let line = Line::from(Span::styled("  no sessions found", dim()));
+        f.render_widget(Paragraph::new(line), area);
+        return;
+    }
+
+    let items: Vec<Line> = state
+        .history_sessions
+        .iter()
+        .enumerate()
+        .map(|(i, session)| {
+            let date = chrono::DateTime::from_timestamp_millis(session.created_at_ms)
+                .map(|dt: chrono::DateTime<chrono::Utc>| dt.format("%d %b %Y").to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+
+            let title = if session.title.len() > 40 {
+                format!("{}…", &session.title[..40])
+            } else {
+                session.title.clone()
+            };
+
+            if i == state.history_cursor {
+                Line::from(vec![
+                    Span::raw("  "),
+                    Span::styled(
+                        format!("{:<42} {}", title, date),
+                        Style::default()
+                            .fg(Color::Black)
+                            .bg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                ])
+            } else {
+                Line::from(vec![
+                    Span::raw("  "),
+                    Span::styled(format!("{:<42} {}", title, date), dim()),
+                ])
+            }
+        })
+        .collect();
+
+    f.render_widget(
+        Paragraph::new(items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::DarkGray))
+                .title(Span::styled(
+                    " sessions  (↑↓ · Enter to load · Esc to cancel) ",
+                    dim(),
+                )),
+        ),
+        area,
+    );
+}
+
