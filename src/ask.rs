@@ -1,5 +1,5 @@
 use crate::db::{Database};
-use crate::models::EntryLog;
+use crate::db::EntryLog;
 
 pub fn ask(query: &String, conn: &Database) -> Result<String, String>{
     let log_limit = Some(100);
