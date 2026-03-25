@@ -1,5 +1,5 @@
 use crate::db::Database;
-use crate::models::RawLog;
+use crate::db::RawLog;
 
 use std::fs;
 use std::path::PathBuf;
