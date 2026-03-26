@@ -7,13 +7,14 @@ use tokio_stream::StreamExt;
 use tracing::error;
 use tracing::info;
 use std::sync::Arc;
-
+use crate::model::Message;
 
 pub async fn handle_ask(db_conn: &Database, ollama_conn: Arc<LlmClient>, query: Option<String>) {
     match query {
         Some(text) => {
             info!("Question: {}", text);
-            match ask(&text, &db_conn) {
+            let history:Vec<Message> = vec![];
+            match ask(&text, &db_conn, &history ) {
                 Ok(prompt) => {
                     match ollama_conn.ollama_ask_stream(&prompt).await {
                         Ok(mut stream) => {

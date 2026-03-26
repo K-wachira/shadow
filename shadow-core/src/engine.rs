@@ -45,7 +45,7 @@ impl ShadowEngine {
         self.db.insert_message(self.session_id, "user", prompt, None)?;
         self.assistant_state = AssistantState::Thinking { secs: 0 };
     
-        let enriched = ask(&prompt.to_string(), &self.db).map_err(|e| color_eyre::eyre::eyre!(e))?;
+        let enriched = ask(&prompt.to_string(), &self.db, &self.messages).map_err(|e| color_eyre::eyre::eyre!(e))?;
         let ollama = Arc::clone(&self.ollama);
     
         let stream = async_stream::stream! {
