@@ -32,8 +32,7 @@ pub async fn run(
 
     let mut textarea = TextArea::default();
     textarea.set_block(Block::bordered().title(" input "));
-    let session_name = "Shadow Session";
-    let _ = shadow_engine.start_session(&session_name);
+    let _ = shadow_engine.start_session();
 
     loop {
         while let Ok(chunk) = rx.try_recv() {
@@ -60,6 +59,11 @@ pub async fn run(
             {
                 shadow_engine.on_stream_complete(&text.clone())?;
             }
+            
+            if shadow_engine.session_name == "Untitled Session".to_string() {
+                shadow_engine.generate_session_title().await?
+            }
+            
             app_state.assistant_state = AssistantState::Idle;
             stream_start = None;
         }

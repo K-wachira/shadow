@@ -22,11 +22,8 @@ fn build_current_history(curr_messages: &Vec<Message>) -> color_eyre::Result<Str
               },
               MessageKind::AssistantText { text }  => {
                   history_blob.push_str(&format!("Shadow: {}", &text));
-
               },
-              _ => {
-                  continue;
-              }
+              _ => {continue;}
           }
     }
     Ok(history_blob)
