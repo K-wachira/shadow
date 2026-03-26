@@ -44,5 +44,5 @@ pub fn render(f: &mut Frame, tui_state: &TuiAppState,   shadow_engine: &mut Shad
     render_status_line(f, chunks[1], tui_state);
     render_yolo_hint(f, chunks[2], tui_state);
     render_input(f, chunks[3], tui_state);
-    render_bottom_pane(f, chunks[4], tui_state);
+    render_bottom_pane(f, chunks[4], tui_state, shadow_engine );
 }

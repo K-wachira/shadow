@@ -4,7 +4,6 @@ use shadow_core::db::Sessions;
 #[derive(Debug)]
 pub struct TuiAppState {
     pub input: String,          // what the user is typing
-    pub session_name: Option<String>,
     pub model: String, // "gemma3:12b"
     pub yolo_mode: bool,
     pub assistant_state: AssistantState,
@@ -28,7 +27,6 @@ impl Default for TuiAppState {
     fn default() -> Self {
         let state = Self {
             input: String::new(),
-            session_name: None,
             model: "llama3.2".to_string(),
             assistant_state: AssistantState::Idle,
 

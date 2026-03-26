@@ -8,6 +8,7 @@ use crate::ask::ask;
 use tokio_stream::StreamExt;
 use crate::db::Sessions;
 use crate::db::SessionMessages;
+use crate::model::MessageKind;
 
 pub struct ShadowEngine {
     pub db: Arc<Database>,
@@ -25,17 +26,16 @@ impl ShadowEngine {
             db,
             ollama,
             session_id: 0,
-            session_name: String::new(),
+            session_name: String::from("Untitled Session"),
             model: model.to_string(),
             assistant_state: AssistantState::Idle,
             messages: vec![],
         })
     }
     
-    pub fn start_session(&mut self, name: &str) -> color_eyre::Result<()> {
-        let session_id = self.db.create_session(name, &self.model)?;
+    pub fn start_session(&mut self) -> color_eyre::Result<()> {
+        let session_id = self.db.create_session(&self.session_name, &self.model)?;
         self.session_id = session_id;
-        self.session_name = name.to_string();
         self.messages.push(Message::logo());
         Ok(())
     }
@@ -84,5 +84,36 @@ impl ShadowEngine {
     
     pub fn end_session(&self) -> color_eyre::Result<()> {
         self.db.end_session(self.session_id)
+    }
+    
+    pub async fn generate_session_title(&mut self) -> color_eyre::Result<()> {
+        // only generate if still using placeholder
+        if self.session_name != "Untitled Session" {
+            return Ok(());
+        }
+    
+        // grab first user + assistant exchange
+        let context: String = self.messages.iter()
+            .filter_map(|m| match &m.kind {
+                MessageKind::UserInput { text } => Some(format!("User: {}", text)),
+                MessageKind::AssistantText { text } => Some(format!("Assistant: {}", text)),
+                _ => None,
+            })
+            .take(2)
+            .collect::<Vec<_>>()
+            .join("\n");
+    
+        let prompt = format!(
+            "Generate a short session title (5 words max) for this conversation. Return only the title as plain text, nothing else.\n\n{}",
+            context
+        );
+    
+        let title = self.ollama.ollama_ask(&prompt).await?;
+        let title = title.trim().to_string();
+    
+        self.db.update_session_title(self.session_id, &title)?;
+        self.session_name = title;
+    
+        Ok(())
     }
 }

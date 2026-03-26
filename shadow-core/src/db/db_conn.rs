@@ -220,6 +220,14 @@ impl Database {
         Ok(self.conn.last_insert_rowid())
     }
     
+    pub fn update_session_title(&self, session_id: i64, title: &str) -> color_eyre::Result<()> {
+        self.conn.execute(
+            "UPDATE sessions SET title = ?1 WHERE id = ?2",
+            rusqlite::params![title, session_id],
+        )?;
+        Ok(())
+    }
+    
     pub fn end_session(&self, session_id: i64) -> color_eyre::Result<()> {
         let now = chrono::Utc::now().timestamp_millis();
         self.conn.execute(
