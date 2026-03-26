@@ -30,7 +30,6 @@ pub async fn run(
 
     let mut textarea = TextArea::default();
     textarea.set_block(Block::bordered().title(" input "));
-    let _ = shadow_engine.start_session();
 
     loop {
         while let Ok(chunk) = rx.try_recv() {

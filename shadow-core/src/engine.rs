@@ -42,6 +42,11 @@ impl ShadowEngine {
     }
     
     pub async fn send_message(&mut self, prompt: &str) -> color_eyre::Result<impl Stream<Item = String> + 'static> {
+        // create session on first message
+        if self.session_id == 0 {
+            self.start_session()?;
+        }
+       
         self.messages.push(Message::user(prompt));
         self.db.insert_message(self.session_id, "user", prompt, None)?;
         self.assistant_state = AssistantState::Thinking { secs: 0 };
