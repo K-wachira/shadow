@@ -28,8 +28,6 @@ pub async fn run(
     let mut last_tick = Instant::now();
     let mut stream_start: Option<Instant> = None;
 
-    app_state.session_name = Some("Shadow Session".into());
-
     let mut textarea = TextArea::default();
     textarea.set_block(Block::bordered().title(" input "));
     let _ = shadow_engine.start_session();
