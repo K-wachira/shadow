@@ -9,6 +9,7 @@ use tokio_stream::StreamExt;
 use crate::db::Sessions;
 use crate::db::SessionMessages;
 use crate::model::MessageKind;
+use tokio::sync::mpsc;
 
 pub struct ShadowEngine {
     pub db: Arc<Database>,
@@ -63,7 +64,7 @@ impl ShadowEngine {
         Ok(stream)
     }
     
-    pub fn on_stream_complete(&mut self, response: &str) -> color_eyre::Result<()> {
+    pub async fn on_stream_complete(&mut self, response: &str, title_tx: mpsc::UnboundedSender<String>) -> color_eyre::Result<()> {
         self.db.insert_message(
             self.session_id,
             "assistant",
@@ -71,6 +72,11 @@ impl ShadowEngine {
             Some(&self.model),
         )?;
         self.assistant_state = AssistantState::Idle;
+
+        if self.session_name == "Untitled Session" {
+            let _ = self.spawn_title_generation(title_tx);
+        }
+        
         Ok(())
     }
     
@@ -86,12 +92,11 @@ impl ShadowEngine {
         self.db.end_session(self.session_id)
     }
     
-    pub async fn generate_session_title(&mut self) -> color_eyre::Result<()> {
-        // only generate if still using placeholder
-        if self.session_name != "Untitled Session" {
-            return Ok(());
-        }
-    
+    fn spawn_title_generation(&mut self, title_tx: mpsc::UnboundedSender<String>)  {
+        eprintln!("on_stream_complete called, session_name: {}", self.session_name);
+
+        let ollama = Arc::clone(&self.ollama);
+
         // grab first user + assistant exchange
         let context: String = self.messages.iter()
             .filter_map(|m| match &m.kind {
@@ -103,17 +108,21 @@ impl ShadowEngine {
             .collect::<Vec<_>>()
             .join("\n");
     
-        let prompt = format!(
-            "Generate a short session title (5 words max) for this conversation. Return only the title as plain text, nothing else.\n\n{}",
-            context
-        );
-    
-        let title = self.ollama.ollama_ask(&prompt).await?;
-        let title = title.trim().to_string();
-    
-        self.db.update_session_title(self.session_id, &title)?;
-        self.session_name = title;
-    
-        Ok(())
+        tokio::spawn(async move {
+            let prompt = format!(
+                "Generate a short session title (5 words max). Return only the title as plain text, nothing else.\n\n{}",
+                context
+            );
+            match ollama.ollama_ask(&prompt).await {
+                Ok(title) => {
+                    eprintln!("Generated title: {}", title);
+                    let _ = title_tx.send(title.trim().to_string());
+                }
+                Err(e) => {
+                    eprintln!("Title generation failed: {}", e);
+                }
+            }
+        });
+
     }
 }

@@ -18,9 +18,9 @@ pub async fn run(
     mut terminal: DefaultTerminal,
     shadow_engine: &mut ShadowEngine,
 ) -> color_eyre::Result<()> {
-    
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
     let (done_tx, mut done_rx) = mpsc::unbounded_channel::<()>();
+    let (title_tx, mut title_rx) = mpsc::unbounded_channel::<String>();
 
     let mut app_state = TuiAppState::default();
     let mut input_buf = String::new();
@@ -55,15 +55,16 @@ pub async fn run(
                 ..
             }) = shadow_engine.messages.last()
             {
-                shadow_engine.on_stream_complete(&text.clone())?;
+                shadow_engine.on_stream_complete(&text.clone(), title_tx.clone()).await?;
             }
-            
-            if shadow_engine.session_name == "Untitled Session".to_string() {
-                shadow_engine.generate_session_title().await?
-            }
-            
+
             app_state.assistant_state = AssistantState::Idle;
             stream_start = None;
+        }
+        
+        if let Ok(title) = title_rx.try_recv() {
+            shadow_engine.session_name = title.clone();
+            shadow_engine.db.update_session_title(shadow_engine.session_id, &title)?;
         }
 
         if last_tick.elapsed() >= tick_rate {
@@ -160,7 +161,7 @@ pub async fn run(
                         input_buf.clear();
 
                         if cmd == "/history" {
-                            match shadow_engine.list_sessions(20) {
+                            match shadow_engine.list_sessions(30) {
                                 Ok(sessions) => {
                                     app_state.history_sessions = sessions;
                                     app_state.history_mode = true;
