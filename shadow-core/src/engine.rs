@@ -30,14 +30,13 @@ impl ShadowEngine {
             session_name: String::from("Untitled Session"),
             model: model.to_string(),
             assistant_state: AssistantState::Idle,
-            messages: vec![],
+            messages: vec![Message::logo()],
         })
     }
     
     pub fn start_session(&mut self) -> color_eyre::Result<()> {
         let session_id = self.db.create_session(&self.session_name, &self.model)?;
         self.session_id = session_id;
-        self.messages.push(Message::logo());
         Ok(())
     }
     
