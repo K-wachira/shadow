@@ -105,6 +105,11 @@ pub async fn run(
                     app_state.slash_input = String::new();
                     input_buf.push('/');
                 }
+                
+                KeyCode::Char('d') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                    shadow_engine.delete_current_session()?;
+                    shadow_engine.messages = shadow_engine.messages.clone();
+                }
 
                 KeyCode::Enter => {
                     if app_state.history_mode {
