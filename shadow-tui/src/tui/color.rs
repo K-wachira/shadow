@@ -38,3 +38,59 @@ pub fn very_dim() -> Style {
         .fg(Color::DarkGray)
         .add_modifier(Modifier::DIM)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hex_color_parses_white() {
+        assert_eq!(hex_color("#FFFFFF"), Color::Rgb(255, 255, 255));
+    }
+
+    #[test]
+    fn hex_color_parses_black() {
+        assert_eq!(hex_color("#000000"), Color::Rgb(0, 0, 0));
+    }
+
+    #[test]
+    fn hex_color_parses_mixed() {
+        assert_eq!(hex_color("#FF0080"), Color::Rgb(255, 0, 128));
+    }
+
+    #[test]
+    fn hex_color_works_without_hash_prefix() {
+        assert_eq!(hex_color("FF8000"), Color::Rgb(255, 128, 0));
+    }
+
+    #[test]
+    fn hex_color_invalid_bytes_default_to_zero() {
+        // Invalid hex chars fall back to 0 via unwrap_or(0)
+        assert_eq!(hex_color("#GGGGGG"), Color::Rgb(0, 0, 0));
+    }
+
+    #[test]
+    fn bright_returns_white_foreground() {
+        assert_eq!(bright().fg, Some(Color::White));
+    }
+
+    #[test]
+    fn bright_bold_has_bold_modifier() {
+        assert!(bright_bold().add_modifier.contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn muted_returns_gray_foreground() {
+        assert_eq!(muted().fg, Some(Color::Gray));
+    }
+
+    #[test]
+    fn dim_returns_dark_gray_foreground() {
+        assert_eq!(dim().fg, Some(Color::DarkGray));
+    }
+
+    #[test]
+    fn very_dim_has_dim_modifier() {
+        assert!(very_dim().add_modifier.contains(Modifier::DIM));
+    }
+}

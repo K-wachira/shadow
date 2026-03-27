@@ -42,6 +42,7 @@ impl Default for TuiAppState {
             slash_input: String::new(),   // what's been typed after "/"
             history_sessions: vec![],
             history_cursor: 0,
+            slash_cursor: 0,
         };
 
         // Logo is always the first message — it scrolls away as history grows.
@@ -61,4 +62,49 @@ pub const SLASH_COMMANDS: &[SlashCommand] = &[
     SlashCommand { name: "/history", description: "list past sessions" },
     SlashCommand { name: "/exit", description: "exit Shadow" },
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_state_has_correct_initial_values() {
+        let state = TuiAppState::default();
+        assert!(state.input.is_empty());
+        assert_eq!(state.model, "llama3.2");
+        assert_eq!(state.scroll_offset, 0);
+        assert!(state.auto_scroll);
+        assert_eq!(state.tick, 0);
+        assert!(!state.slash_mode);
+        assert!(!state.history_mode);
+        assert!(!state.yolo_mode);
+        assert!(state.slash_input.is_empty());
+        assert!(state.history_sessions.is_empty());
+        assert_eq!(state.history_cursor, 0);
+        assert_eq!(state.slash_cursor, 0);
+    }
+
+    #[test]
+    fn slash_commands_list_contains_expected_commands() {
+        let names: Vec<&str> = SLASH_COMMANDS.iter().map(|c| c.name).collect();
+        assert!(names.contains(&"/new"));
+        assert!(names.contains(&"/delete"));
+        assert!(names.contains(&"/history"));
+        assert!(names.contains(&"/exit"));
+    }
+
+    #[test]
+    fn slash_commands_all_have_descriptions() {
+        for cmd in SLASH_COMMANDS {
+            assert!(!cmd.description.is_empty(), "{} has empty description", cmd.name);
+        }
+    }
+
+    #[test]
+    fn slash_commands_names_start_with_slash() {
+        for cmd in SLASH_COMMANDS {
+            assert!(cmd.name.starts_with('/'), "{} doesn't start with /", cmd.name);
+        }
+    }
+}
 

@@ -10,7 +10,7 @@ use ratatui::layout::Constraint;
 use ratatui::layout::Direction;
 use ratatui::layout::Layout;
 use shadow_core::engine::ShadowEngine;
-
+use crate::tui::SLASH_COMMANDS;
 // ─── Root render ─────────────────────────────────────────────────────────────
 
 /// Call once per frame from your event loop.

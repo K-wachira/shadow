@@ -308,3 +308,156 @@ fn flush_line(spans: &mut Vec<Span<'static>>, lines: &mut Vec<Line<'static>>) {
         lines.push(Line::from(spans.drain(..).collect::<Vec<_>>()));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn all_text(lines: &[Line<'_>]) -> String {
+        lines.iter()
+            .flat_map(|l| l.spans.iter())
+            .map(|s| s.content.as_ref())
+            .collect::<Vec<_>>()
+            .join("")
+    }
+
+    fn has_modifier(lines: &[Line<'_>], modifier: Modifier) -> bool {
+        lines.iter()
+            .flat_map(|l| l.spans.iter())
+            .any(|s| s.style.add_modifier.contains(modifier))
+    }
+
+    fn has_fg(lines: &[Line<'_>], color: Color) -> bool {
+        lines.iter()
+            .flat_map(|l| l.spans.iter())
+            .any(|s| s.style.fg == Some(color))
+    }
+
+    #[test]
+    fn empty_string_returns_no_content_lines() {
+        let lines = markdown_to_lines("");
+        // Should be empty or just blank padding — no real text
+        assert!(all_text(&lines).trim().is_empty());
+    }
+
+    #[test]
+    fn plain_text_preserved_in_output() {
+        let lines = markdown_to_lines("Hello world");
+        assert!(all_text(&lines).contains("Hello world"));
+    }
+
+    #[test]
+    fn bold_text_has_bold_modifier() {
+        let lines = markdown_to_lines("**bold text**");
+        assert!(has_modifier(&lines, Modifier::BOLD));
+    }
+
+    #[test]
+    fn italic_text_has_italic_modifier() {
+        let lines = markdown_to_lines("*italic text*");
+        assert!(has_modifier(&lines, Modifier::ITALIC));
+    }
+
+    #[test]
+    fn strikethrough_has_crossed_out_modifier() {
+        let lines = markdown_to_lines("~~struck~~");
+        assert!(has_modifier(&lines, Modifier::CROSSED_OUT));
+    }
+
+    #[test]
+    fn inline_code_has_yellow_foreground() {
+        let lines = markdown_to_lines("Use `code` here");
+        assert!(has_fg(&lines, Color::Yellow));
+    }
+
+    #[test]
+    fn h1_heading_has_cyan_foreground() {
+        let lines = markdown_to_lines("# Heading One");
+        assert!(has_fg(&lines, Color::Cyan));
+        assert!(has_modifier(&lines, Modifier::BOLD));
+    }
+
+    #[test]
+    fn h2_heading_has_blue_foreground() {
+        let lines = markdown_to_lines("## Heading Two");
+        assert!(has_fg(&lines, Color::Blue));
+    }
+
+    #[test]
+    fn h3_heading_has_magenta_foreground() {
+        let lines = markdown_to_lines("### Heading Three");
+        assert!(has_fg(&lines, Color::Magenta));
+    }
+
+    #[test]
+    fn bullet_list_item_text_preserved() {
+        let lines = markdown_to_lines("- item one\n- item two");
+        let text = all_text(&lines);
+        assert!(text.contains("item one"));
+        assert!(text.contains("item two"));
+    }
+
+    #[test]
+    fn bullet_list_has_bullet_character() {
+        let lines = markdown_to_lines("- item");
+        let text = all_text(&lines);
+        assert!(text.contains('•'));
+    }
+
+    #[test]
+    fn ordered_list_has_numbers() {
+        let lines = markdown_to_lines("1. first\n2. second");
+        let text = all_text(&lines);
+        assert!(text.contains("1."));
+        assert!(text.contains("2."));
+    }
+
+    #[test]
+    fn horizontal_rule_produces_dashes() {
+        let lines = markdown_to_lines("---");
+        let text = all_text(&lines);
+        assert!(text.contains('─'));
+    }
+
+    #[test]
+    fn blockquote_has_prefix_character() {
+        let lines = markdown_to_lines("> some quote");
+        let text = all_text(&lines);
+        assert!(text.contains('▌'));
+    }
+
+    #[test]
+    fn code_block_preserves_content() {
+        let lines = markdown_to_lines("```\nlet x = 1;\n```");
+        let text = all_text(&lines);
+        assert!(text.contains("let x = 1;"));
+    }
+
+    #[test]
+    fn code_block_has_green_foreground() {
+        let lines = markdown_to_lines("```\ncode here\n```");
+        assert!(has_fg(&lines, Color::Green));
+    }
+
+    #[test]
+    fn link_text_preserved_url_dropped() {
+        let lines = markdown_to_lines("[click here](https://example.com)");
+        let text = all_text(&lines);
+        assert!(text.contains("click here"));
+        assert!(!text.contains("https://example.com"));
+    }
+
+    #[test]
+    fn task_list_checked_has_check_mark() {
+        let lines = markdown_to_lines("- [x] done");
+        let text = all_text(&lines);
+        assert!(text.contains('☑'));
+    }
+
+    #[test]
+    fn task_list_unchecked_has_empty_box() {
+        let lines = markdown_to_lines("- [ ] todo");
+        let text = all_text(&lines);
+        assert!(text.contains('☐'));
+    }
+}
