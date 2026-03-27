@@ -41,50 +41,30 @@ pub fn render_chat(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_en
         }
     }
 
-    // Scroll window: show bottom `area.height` lines, adjusted by scroll_offset
+    // Scroll math: estimate total visual rows, then use Paragraph::scroll()
+    // to avoid double-wrapping that occurs when manually slicing lines.
     let height = area.height as usize;
-    let width = area.width as usize;
+    // let width = area.width as usize;
 
-    let visual_lines: Vec<(usize, Line)> = all_lines
-        .into_iter()
-        .enumerate()
-        .map(|(_, line)| {
-            let len = line.width();
-            let rows = if len == 0 {
-                1
-            } else {
-                (len + width - 1) / width
-            };
-            (rows, line)
-        })
-        .collect();
+    // let total_visual: usize = all_lines.iter().map(|line| {
+    //     let len = line.width();
+    //     if len == 0 { 1 } else { (len + width - 1) / width }
+    // }).sum();
 
-    let total_visual: usize = visual_lines.iter().map(|(r, _)| r).sum();
-    let max_scroll = total_visual.saturating_sub(height);
-
-    let skip_visual = if tui_state.auto_scroll {
+    let total_lines = all_lines.len();
+    let max_scroll = total_lines.saturating_sub(height);
+    
+    let scroll_row = if tui_state.auto_scroll {
         max_scroll
     } else {
-        let offset = tui_state.scroll_offset.min(max_scroll);
-        max_scroll.saturating_sub(offset)
-    };
-
-    // now skip logical lines until we've passed skip_visual visual rows
-    let mut skipped = 0;
-    let visible: Vec<Line> = visual_lines
-        .into_iter()
-        .skip_while(|(rows, _)| {
-            if skipped + rows <= skip_visual {
-                skipped += rows;
-                true
-            } else {
-                false
-            }
-        })
-        .take(height)
-        .map(|(_, line)| line)
-        .collect();
-    f.render_widget(Paragraph::new(visible).wrap(Wrap { trim: true }), area);
+        max_scroll.saturating_sub(tui_state.scroll_offset.min(max_scroll))
+    };  
+    f.render_widget(
+        Paragraph::new(all_lines)
+            .wrap(Wrap { trim: false })
+            .scroll((scroll_row as u16, 0)),
+        area,
+    );
 }
 
 fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
