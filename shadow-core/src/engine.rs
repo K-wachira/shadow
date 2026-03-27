@@ -98,8 +98,6 @@ impl ShadowEngine {
     }
     
     fn spawn_title_generation(&mut self, title_tx: mpsc::UnboundedSender<String>)  {
-        eprintln!("on_stream_complete called, session_name: {}", self.session_name);
-
         let ollama = Arc::clone(&self.ollama);
 
         // grab first user + assistant exchange
@@ -120,7 +118,6 @@ impl ShadowEngine {
             );
             match ollama.ollama_ask(&prompt).await {
                 Ok(title) => {
-                    eprintln!("Generated title: {}", title);
                     let _ = title_tx.send(title.trim().to_string());
                 }
                 Err(e) => {
