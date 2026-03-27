@@ -20,10 +20,20 @@ async fn cli_main() -> color_eyre::Result<()> {
     let ollama_conn = Arc::new(LlmClient::init().map_err(|e| color_eyre::eyre::eyre!(e))?);
     let model = "";
     let mut shadow_engine = ShadowEngine::new(db_conn, ollama_conn, model)?;
+    
+    crossterm::terminal::enable_raw_mode()?;
+    let height = crossterm::terminal::size()?.1;
 
-    let terminal = ratatui::init();
+    let terminal = Terminal::with_options(
+        CrosstermBackend::new(io::stdout()),
+        TerminalOptions {
+            viewport: Viewport::Inline(height), // adjust height as needed
+        },
+    )?;
+    
     let result = run(terminal,  &mut shadow_engine ).await;
-    ratatui::restore();
+    crossterm::terminal::disable_raw_mode()?;
+    println!();
     result?;
     
     // let args = Args::parse();
