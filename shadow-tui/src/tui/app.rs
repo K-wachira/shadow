@@ -201,7 +201,12 @@ pub async fn run(
                                     Err(_) => {}
                                 }
                             }
-                            SlashAction::Exit => { should_quit = true; }
+                            SlashAction::Exit => { 
+                                if matches!(shadow_engine.assistant_state, AssistantState::Idle) {
+                                    should_quit = true;
+                                }
+                                // silently ignore if responding — or show a message in the UI
+                            }
                             SlashAction::Unknown(_) => { /* show error in UI */ }
                         }
                     } else {
