@@ -19,7 +19,7 @@ enum SlashAction {
     Delete,
     History,
     Exit,
-    Unknown(String)
+    Unknown(())
 }
 
 impl SlashAction {
@@ -29,7 +29,7 @@ impl SlashAction {
             "/new" => Self::New,
             "/exit" => Self::Exit,
             "/history" => Self::History,
-            other => Self::Unknown(other.to_string()),
+            _ => Self::Unknown(()),
         }
     }
 }
