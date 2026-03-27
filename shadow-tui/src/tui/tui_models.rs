@@ -55,6 +55,9 @@ pub struct SlashCommand {
 }
 
 pub const SLASH_COMMANDS: &[SlashCommand] = &[
-    SlashCommand { name: "/history", description: "Show past sessions" },
+    SlashCommand { name: "/new", description: "start new session" },
+    SlashCommand { name: "/delete", description: "delete current session" },
+    SlashCommand { name: "/history", description: "list past sessions" },
+    SlashCommand { name: "/exit", description: "exit Shadow" },
 ];
 
