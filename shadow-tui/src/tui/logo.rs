@@ -1,96 +1,98 @@
 use ratatui::style::Color;
-use ratatui::style::Modifier;
 use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
 
-#[allow(unused_variables)]
+const ACCENT: Color = Color::Rgb(207, 106, 76);
+const DIM: Color = Color::Rgb(120, 120, 130);
+const BORDER: Color = Color::Rgb(80, 80, 90);
+
+// Mascot pixel art using block elements
+// const MASCOT: [&str; 6] = [
+//     "  ██████  ",
+//     "  █ ██ █  ",
+//     "  ██████  ",
+//     "  ██  ██  ",
+//     "  █    █  ",
+//     "          ",
+// ];
+// const MASCOT: [&str; 2] = [
+//     "⠀⠀⡤⢤⠀⣄⢄⡤⡀⡠⡀⡄⠀⡄⠀⠀",
+//     "⠀⠀⠭⠿⠉⠿⠹⠧⠊⠢⠊⠧⠧⠇⠀⠀",
+// ];
+
+const MASCOT: [&str; 5] = [
+    "                                ",
+    "█▀▀█ █▄▀▄█▀▄▀▄█   █             ",
+    "▀▀██▀██▀██ █ ██ ▄ █             ",
+    "▀▀▀▀ ▀▀ ▀▀▀ ▀ ▀▀▀▀▀             ",
+    "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀             ",
+];
 pub fn logo_lines() -> Vec<Line<'static>> {
-    let border_color = Style::default().fg(Color::Rgb(70, 70, 80));
-    let label_style = Style::default().fg(Color::DarkGray);
-    let value_style = Style::default()
-        .fg(Color::White)
-        .add_modifier(Modifier::BOLD);
-    let hint_style = Style::default().fg(Color::Rgb(80, 80, 180));
-    let title_style = Style::default()
-        .fg(Color::White)
-        .add_modifier(Modifier::BOLD);
-    let version_style = Style::default().fg(Color::DarkGray);
+    let dim = Style::default().fg(DIM);
+    let border = Style::default().fg(BORDER);
+    let mascot_style = Style::default().fg(ACCENT);
 
-    let w = 50; // inner width of the box (excluding border chars)
+    // Width matches a standard 80-col terminal, leaving breathing room
+    let w: usize = 50;
 
-    // ┌──────────────────────────────────────────┐
-    let top = format!("┌{}┐", "─".repeat(w + 1));
-    let bottom = format!("└{}┘", "─".repeat(w + 1));
-    let empty = format!("│{:w$}│", "", w = w + 1);
+    let top    = format!("┌{}┐", "─".repeat(w));
+    let bottom = format!("└{}┘", "─".repeat(w));
 
-    // │ >_ Shadow (v0.1.0)                       │
-    let title_content = ">_ Shadow";
-    let version = "(v0.1.0)";
-    let title_line = format!(" {}  {}", title_content, version);
-    let title_padded = format!("│{:<w$}│", title_line, w = w);
+    let pad = |s: &str| -> String {
+        let len = s.chars().count();
+        let total_pad = w.saturating_sub(len);
+        let left_pad = total_pad / 2;
+        let right_pad = total_pad - left_pad;
+        format!("{}{}{}", " ".repeat(left_pad), s, " ".repeat(right_pad))
+    };
 
-    // │ model:     llama3.2                       │
-    let model_line = format!(" {:<10} {}", "model:", "llama3.2");
-    let model_padded = format!("│{:<w$}│", model_line, w = w);
 
-    // │ location:  Nairobi                        │
-    let loc_line = format!(" {:<10} {}", "location:", "Nairobi");
-    let loc_padded = format!("│{:<w$}│", loc_line, w = w);
+    let border_row = |content: &'static str, style: Style| -> Line<'static> {
+        Line::from(vec![
+            Span::styled("│", border),
+            Span::styled(pad(content), style),
+            Span::styled("│", border),
+        ])
+    };
 
     vec![
         Line::raw(""),
-        // ┌──────────────────────────────────────────┐
-        Line::from(Span::styled(top, border_color)),
-        // │ >_ Shadow (v0.1.0)                       │
+        Line::from(Span::styled(top, border)),
+
+        // Mascot
         Line::from(vec![
-            Span::styled("│".to_string(), border_color),
-            Span::raw("  "),
-            Span::styled(">_".to_string(), hint_style),
-            Span::raw(" "),
-            Span::styled("Shadow".to_string(), title_style),
-            Span::raw("  "),
-            Span::styled(version.to_string(), version_style),
-            Span::styled(
-                format!("{:>w$}│", "", w = w - " >_ Shadow  (v0.1.0)".len()),
-                border_color,
-            ),
+            Span::styled("│", border),
+            Span::styled(pad(MASCOT[0]), mascot_style),
+            Span::styled("│", border),
         ]),
-        // │                                          │
-        Line::from(Span::styled(empty.clone(), border_color)),
-        // │ model:     llama3.2   /model to change   │
         Line::from(vec![
-            Span::styled("│".to_string(), border_color),
-            Span::raw("  "),
-            Span::styled(format!("{:<10}", "model:"), label_style),
-            Span::raw(" "),
-            Span::styled("llama3.2".to_string(), value_style),
-            Span::raw("   "),
-            Span::styled("/model".to_string(), hint_style),
-            Span::styled(" to change", label_style),
-            Span::styled(
-                format!(
-                    "{:>w$}│",
-                    "",
-                    w = w - " model:     llama3.2   /model to change".len()
-                ),
-                border_color,
-            ),
+            Span::styled("│", border),
+            Span::styled(pad(MASCOT[1]), mascot_style),
+            Span::styled("│", border),
         ]),
-        // │ location:  Nairobi                       │
         Line::from(vec![
-            Span::styled("│".to_string(), border_color),
-            Span::raw("  "),
-            Span::styled(format!("{:<10}", "location:"), label_style),
-            Span::raw(" "),
-            Span::styled("Nairobi".to_string(), value_style),
-            Span::styled(
-                format!("{:>w$}│", "", w = w - " location:  Nairobi".len()),
-                border_color,
-            ),
+            Span::styled("│", border),
+            Span::styled(pad(MASCOT[2]), mascot_style),
+            Span::styled("│", border),
         ]),
-        // └──────────────────────────────────────────┘
-        Line::from(Span::styled(bottom, border_color)),
+        Line::from(vec![
+            Span::styled("│", border),
+            Span::styled(pad(MASCOT[3]), mascot_style),
+            Span::styled("│", border),
+        ]),
+        Line::from(vec![
+            Span::styled("│", border),
+            Span::styled(pad(MASCOT[4]), mascot_style),
+            Span::styled("│", border),
+        ]),
+
+
+        // Meta info
+        border_row("kelvin ·  gemma3:12b  ·  v0.1.0", dim),
+
+        
+        Line::from(Span::styled(bottom, border)),
         Line::raw(""),
     ]
 }
