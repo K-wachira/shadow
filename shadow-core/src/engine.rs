@@ -34,7 +34,7 @@ impl ShadowEngine {
         })
     }
     
-    pub fn start_session(&mut self) -> color_eyre::Result<()> {
+    fn start_session(&mut self) -> color_eyre::Result<()> {
         let session_id = self.db.create_session(&self.session_name, &self.model)?;
         self.session_id = session_id;
         Ok(())
