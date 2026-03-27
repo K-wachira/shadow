@@ -13,6 +13,8 @@ use shadow_core::model::MessageKind;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
+use crate::tui::SLASH_COMMANDS;
+use crate::tui::SlashCommand;
 
 enum SlashAction {
     New, 
@@ -123,6 +125,7 @@ pub async fn run(
                     // only enter slash mode if input is empty
                     app_state.slash_mode = true;
                     app_state.slash_input = String::new();
+                    app_state.slash_cursor = 0; // reset
                     input_buf.push('/');
                 }
 
@@ -174,12 +177,20 @@ pub async fn run(
                             }
                         }
                     } else if app_state.slash_mode {
-                        let cmd = input_buf.trim().to_string();
+                        let input = app_state.slash_input.trim_start_matches('/').to_lowercase();
+                        let matching: Vec<&SlashCommand> = SLASH_COMMANDS
+                            .iter()
+                            .filter(|cmd| cmd.name.trim_start_matches('/').starts_with(&input))
+                            .collect();
+                    
+                        let cmd = matching.get(app_state.slash_cursor).map(|c| c.name);
+                    
                         app_state.slash_mode = false;
                         app_state.slash_input = String::new();
+                        app_state.slash_cursor = 0;
                         input_buf.clear();
 
-                        match SlashAction::parse(&cmd) {
+                        match SlashAction::parse(&cmd.unwrap_or("")) {
                             SlashAction::New => { 
                                 if shadow_engine.messages.len() > 1 {
                                     shadow_engine.start_new_session();
@@ -251,7 +262,9 @@ pub async fn run(
                 }
 
                 KeyCode::Up => {
-                    if app_state.history_mode {
+                    if app_state.slash_mode {
+                        app_state.slash_cursor = app_state.slash_cursor.saturating_sub(1);
+                    } else if app_state.history_mode {
                         app_state.history_cursor = app_state.history_cursor.saturating_sub(1);
                     } else {
                         app_state.auto_scroll = false;
@@ -260,7 +273,10 @@ pub async fn run(
                 }
 
                 KeyCode::Down => {
-                    if app_state.history_mode {
+                    if app_state.slash_mode {
+                        let max = SLASH_COMMANDS.len().saturating_sub(1);
+                        app_state.slash_cursor = (app_state.slash_cursor + 1).min(max);
+                    } else if app_state.history_mode {
                         let max = app_state.history_sessions.len().saturating_sub(1);
                         app_state.history_cursor = (app_state.history_cursor + 1).min(max);
                     } else {

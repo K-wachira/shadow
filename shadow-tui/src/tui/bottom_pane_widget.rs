@@ -36,9 +36,7 @@ pub fn render_bottom_pane(f: &mut Frame, area: Rect, tui_state: &TuiAppState, sh
 }
 
 fn render_slash_picker(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
-    // filter commands by what's been typed
     let input = tui_state.slash_input.trim_start_matches('/').to_lowercase();
-
     let matching: Vec<&SlashCommand> = SLASH_COMMANDS
         .iter()
         .filter(|cmd| cmd.name.trim_start_matches('/').starts_with(&input))
@@ -69,5 +67,5 @@ fn render_slash_picker(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
         })
         .collect();
 
-    f.render_widget(Paragraph::new(line), area);
+    f.render_widget(Paragraph::new(lines), area);
 }
