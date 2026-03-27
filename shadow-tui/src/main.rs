@@ -7,6 +7,9 @@ use tracing_subscriber;
 use std::sync::Arc;
 use tui::run;
 use shadow_core::engine::ShadowEngine;
+use ratatui::{Terminal, TerminalOptions, Viewport};
+use ratatui::backend::CrosstermBackend;
+use std::io;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
