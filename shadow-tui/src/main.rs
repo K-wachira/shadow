@@ -25,8 +25,9 @@ async fn cli_main() -> color_eyre::Result<()> {
     let mut shadow_engine = ShadowEngine::new(db_conn, ollama_conn, model)?;
     
     crossterm::terminal::enable_raw_mode()?;
+    crossterm::execute!(io::stdout(), crossterm::event::EnableMouseCapture)?;
     let height = crossterm::terminal::size()?.1;
-
+     
     let terminal = Terminal::with_options(
         CrosstermBackend::new(io::stdout()),
         TerminalOptions {
@@ -35,25 +36,10 @@ async fn cli_main() -> color_eyre::Result<()> {
     )?;
     
     let result = run(terminal,  &mut shadow_engine ).await;
+    crossterm::execute!(io::stdout(), crossterm::event::DisableMouseCapture)?;
     crossterm::terminal::disable_raw_mode()?;
-    println!();
     result?;
-    
-    // let args = Args::parse();
-    // match args.command {
-    //     Some(Commands::Ask { query }) => handle_ask(&db_conn, &ollama_conn, query).await,
-    //     Some(Commands::Recent { content }) => handle_recent(content, &db_conn).await,
-    //     Some(Commands::Ingest) => handle_ingests(&db_conn),
-    //     Some(Commands::Log { content }) => handle_log(content).await,
-    //     Some(Commands::Stats) => handle_stats().await,
-    //     None => {
-    //         // no command passed → launch TUI
-    //         let terminal = ratatui::init();
-    //         let result = run(terminal,  &mut shadow_engine ).await;
-    //         ratatui::restore();
-    //         result?;
-    //     }
-    // }
+
 
     Ok(())
 }
