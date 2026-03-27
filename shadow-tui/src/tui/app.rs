@@ -14,6 +14,26 @@ use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 
+enum SlashAction {
+    New, 
+    Delete,
+    History,
+    Exit,
+    Unknown(String)
+}
+
+impl SlashAction {
+    fn parse(input: &str) -> Self {
+        match input.trim() {
+            "/delete" => Self::Delete,
+            "/new" => Self::New,
+            "/exit" => Self::Exit,
+            "/history" => Self::History,
+            other => Self::Unknown(other.to_string()),
+        }
+    }
+}
+
 pub async fn run(
     mut terminal: DefaultTerminal,
     shadow_engine: &mut ShadowEngine,
@@ -164,15 +184,30 @@ pub async fn run(
                         app_state.slash_input = String::new();
                         input_buf.clear();
 
-                        if cmd == "/history" {
-                            match shadow_engine.list_sessions(30) {
-                                Ok(sessions) => {
-                                    app_state.history_sessions = sessions;
-                                    app_state.history_mode = true;
-                                    app_state.history_cursor = 0;
+                        match SlashAction::parse(&cmd) {
+                            SlashAction::New => { 
+                                if shadow_engine.messages.len() > 1 {
+                                    shadow_engine.start_new_session();
+                                    app_state.auto_scroll = true;
+                                    app_state.scroll_offset = 0;
                                 }
-                                Err(_) => {}
                             }
+                            SlashAction::Delete => {
+                                shadow_engine.delete_current_session()?;
+                                shadow_engine.messages = shadow_engine.messages.clone();
+                            }
+                            SlashAction::History => { 
+                                match shadow_engine.list_sessions(30) {
+                                    Ok(sessions) => {
+                                        app_state.history_sessions = sessions;
+                                        app_state.history_mode = true;
+                                        app_state.history_cursor = 0;
+                                    }
+                                    Err(_) => {}
+                                }
+                            }
+                            SlashAction::Exit => { should_quit = true; }
+                            SlashAction::Unknown(_) => { /* show error in UI */ }
                         }
                     } else {
                         let prompt = input_buf.trim().to_string();
