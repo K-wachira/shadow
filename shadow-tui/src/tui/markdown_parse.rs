@@ -1,3 +1,4 @@
+use pulldown_cmark::CodeBlockKind;
 use pulldown_cmark::Event;
 use pulldown_cmark::HeadingLevel;
 use pulldown_cmark::Options;
@@ -63,33 +64,61 @@ pub fn markdown_to_lines(markdown: &str) -> Vec<Line<'static>> {
             }
 
             // ── Code block ──────────────────────────────────────────────────
-            Event::Start(Tag::CodeBlock(_)) => {
+            Event::Start(Tag::CodeBlock(kind)) => {
                 in_code_block = true;
                 flush_line(&mut current_spans, &mut lines);
-                lines.push(Line::raw(""));
+                let lang = match &kind {
+                    CodeBlockKind::Fenced(l) if !l.is_empty() => l.to_string(),
+                    _ => String::new(),
+                };
+                if lang.is_empty() {
+                    lines.push(Line::styled(
+                        "─────────────────────".to_string(),
+                        Style::default().fg(Color::DarkGray),
+                    ));
+                } else {
+                    lines.push(Line::from(vec![
+                        Span::styled("── ".to_string(), Style::default().fg(Color::DarkGray)),
+                        Span::styled(lang, Style::default().fg(Color::Yellow).add_modifier(Modifier::DIM)),
+                        Span::styled(" ──────────────────".to_string(), Style::default().fg(Color::DarkGray)),
+                    ]));
+                }
             }
             Event::End(TagEnd::CodeBlock) => {
                 flush_line(&mut current_spans, &mut lines);
                 in_code_block = false;
+                lines.push(Line::styled(
+                    "─────────────────────".to_string(),
+                    Style::default().fg(Color::DarkGray),
+                ));
                 lines.push(Line::raw(""));
             }
 
             // ── Headings ────────────────────────────────────────────────────
             Event::Start(Tag::Heading { level, .. }) => {
-                let style = match level {
-                    HeadingLevel::H1 => Style::default()
-                        .fg(Color::Cyan)
-                        .add_modifier(Modifier::BOLD),
-                    HeadingLevel::H2 => Style::default()
-                        .fg(Color::Blue)
-                        .add_modifier(Modifier::BOLD),
-                    HeadingLevel::H3 => Style::default()
-                        .fg(Color::Magenta)
-                        .add_modifier(Modifier::BOLD),
-                    _ => Style::default()
-                        .fg(Color::White)
-                        .add_modifier(Modifier::BOLD),
+                flush_line(&mut current_spans, &mut lines);
+                let (prefix, style) = match level {
+                    HeadingLevel::H1 => (
+                        "# ",
+                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    ),
+                    HeadingLevel::H2 => (
+                        "## ",
+                        Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD),
+                    ),
+                    HeadingLevel::H3 => (
+                        "### ",
+                        Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+                    ),
+                    _ => (
+                        "#### ",
+                        Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
+                    ),
                 };
+                current_spans.push(Span::styled(
+                    prefix.to_string(),
+                    Style::default().fg(Color::DarkGray),
+                ));
                 style_stack.push(style);
             }
             Event::End(TagEnd::Heading(_)) => {
@@ -371,22 +400,29 @@ mod tests {
     }
 
     #[test]
-    fn h1_heading_has_cyan_foreground() {
+    fn h1_heading_has_cyan_foreground_and_prefix() {
         let lines = markdown_to_lines("# Heading One");
         assert!(has_fg(&lines, Color::Cyan));
         assert!(has_modifier(&lines, Modifier::BOLD));
+        let text = all_text(&lines);
+        assert!(text.contains("# "), "h1 should have '# ' prefix");
+        assert!(text.contains("Heading One"));
     }
 
     #[test]
-    fn h2_heading_has_blue_foreground() {
+    fn h2_heading_has_blue_foreground_and_prefix() {
         let lines = markdown_to_lines("## Heading Two");
         assert!(has_fg(&lines, Color::Blue));
+        let text = all_text(&lines);
+        assert!(text.contains("## "), "h2 should have '## ' prefix");
     }
 
     #[test]
-    fn h3_heading_has_magenta_foreground() {
+    fn h3_heading_has_magenta_foreground_and_prefix() {
         let lines = markdown_to_lines("### Heading Three");
         assert!(has_fg(&lines, Color::Magenta));
+        let text = all_text(&lines);
+        assert!(text.contains("### "), "h3 should have '### ' prefix");
     }
 
     #[test]
@@ -437,6 +473,22 @@ mod tests {
     fn code_block_has_green_foreground() {
         let lines = markdown_to_lines("```\ncode here\n```");
         assert!(has_fg(&lines, Color::Green));
+    }
+
+    #[test]
+    fn code_block_with_language_shows_label() {
+        let lines = markdown_to_lines("```python\nprint('hi')\n```");
+        let text = all_text(&lines);
+        assert!(text.contains("python"), "language label should appear in output");
+        assert!(text.contains("print('hi')"), "code content should be preserved");
+    }
+
+    #[test]
+    fn code_block_with_language_has_border_lines() {
+        let lines = markdown_to_lines("```rust\nfn main() {}\n```");
+        // border lines contain '─'
+        let text = all_text(&lines);
+        assert!(text.contains('─'));
     }
 
     #[test]
