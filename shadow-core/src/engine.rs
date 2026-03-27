@@ -40,6 +40,13 @@ impl ShadowEngine {
         Ok(())
     }
     
+    pub fn start_new_session(&mut self){
+        self.session_name = String::from("Untitled Session");
+        self.session_id = 0;
+        self.messages = vec![Message::logo()];
+        self.assistant_state = AssistantState::Idle;
+    }
+    
     pub async fn send_message(&mut self, prompt: &str) -> color_eyre::Result<impl Stream<Item = String> + 'static> {
         // create session on first message
         if self.session_id == 0 {
