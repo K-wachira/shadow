@@ -32,6 +32,8 @@ pub async fn run(
     textarea.set_block(Block::bordered().title(" input "));
 
     loop {
+        let mut should_quit = false;
+
         while let Ok(chunk) = rx.try_recv() {
             let chunk = chunk.replace("\\n", "\n"); // clean here
             match shadow_engine.messages.last_mut() {
@@ -94,9 +96,7 @@ pub async fn run(
                     } else if app_state.history_mode {
                         app_state.history_mode = false;
                         app_state.history_sessions = vec![];
-                    } else {
-                        break;
-                    }
+                    } 
                 }
 
                 KeyCode::Char('/') if input_buf.is_empty() => {
@@ -260,6 +260,9 @@ pub async fn run(
                 _ => {}
             },
             _ => {}
+        }
+        if should_quit {
+            break;
         }
     }
 
