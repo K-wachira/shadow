@@ -335,5 +335,10 @@ impl Database {
         .collect::<Result<Vec<_>, _>>()?;
         Ok(messages)
     }
-    
+  
+    pub fn delete_session(&self, session_id: i64) -> color_eyre::Result<()> {
+        self.conn.execute("DELETE FROM session_messages WHERE session_id = ?1", rusqlite::params![session_id])?;
+        self.conn.execute("DELETE FROM sessions WHERE id = ?1", rusqlite::params![session_id])?;
+        Ok(())
+    }  
 }
