@@ -7,7 +7,6 @@ pub struct TuiAppState {
     pub model: String, // "gemma3:12b"
     pub yolo_mode: bool,
     pub assistant_state: AssistantState,
-    // pub context_logs: Vec<String>, // logs shown in right panel
 
     pub cursor_pos: usize,
     /// Lines scrolled up from the bottom (0 = latest content visible)
