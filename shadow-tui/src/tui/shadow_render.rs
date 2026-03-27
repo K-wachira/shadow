@@ -29,6 +29,12 @@ pub fn render(f: &mut Frame, tui_state: &TuiAppState,   shadow_engine: &mut Shad
     //  │  statusbar    (1 row)            │  "~ [session]   model $0.00 99%"
     //  └──────────────────────────────────┘
 
+    let bottom_height = if tui_state.slash_mode {
+        SLASH_COMMANDS.len() as u16
+    } else {
+        1
+    };
+    
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -36,7 +42,7 @@ pub fn render(f: &mut Frame, tui_state: &TuiAppState,   shadow_engine: &mut Shad
             Constraint::Length(1),
             Constraint::Length(1),
             Constraint::Length(1),
-            Constraint::Length(1),
+            Constraint::Length(bottom_height),
         ])
         .split(f.area());
 

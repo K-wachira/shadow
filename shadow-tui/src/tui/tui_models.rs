@@ -20,6 +20,7 @@ pub struct TuiAppState {
     pub history_mode: bool,          // navigating session list
     pub history_sessions: Vec<Sessions>,
     pub history_cursor: usize,
+    pub slash_cursor: usize,
 }
 
 impl Default for TuiAppState {

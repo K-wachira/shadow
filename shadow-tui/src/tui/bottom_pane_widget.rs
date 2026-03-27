@@ -50,19 +50,24 @@ fn render_slash_picker(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
         return;
     }
 
-    // for now just show the first match — expand to a list later
-    let cmd = matching[0];
-    let line = Line::from(vec![
-        Span::raw("  "),
-        Span::styled(
-            cmd.name,
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::raw("  "),
-        Span::styled(cmd.description, dim() as Style),
-    ]);
+    let lines: Vec<Line> = matching
+        .iter()
+        .enumerate()
+        .map(|(i, cmd)| {
+            let selected = i == tui_state.slash_cursor;
+            let style = if selected {
+                Style::default().fg(Color::Black).bg(Color::Cyan)
+            } else {
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            };
+            Line::from(vec![
+                Span::raw("  "),
+                Span::styled(cmd.name, style),
+                Span::raw("  "),
+                Span::styled(cmd.description, dim()),
+            ])
+        })
+        .collect();
 
     f.render_widget(Paragraph::new(line), area);
 }
