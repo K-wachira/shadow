@@ -128,6 +128,17 @@ impl ShadowEngine {
                 }
             }
         });
-
+    }
+    
+    pub fn delete_current_session(&mut self) -> color_eyre::Result<()> {
+        if self.session_id != 0 {
+            self.db.delete_session(self.session_id)?;
+        }
+        self.session_id = 0;
+        self.session_name = "Untitled Session".to_string();
+        self.assistant_state = AssistantState::Idle;
+        self.messages.clear();
+        self.messages.push(Message::logo());
+        Ok(())
     }
 }
