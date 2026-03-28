@@ -74,7 +74,7 @@ fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
         MessageKind::Logo => logo_lines(),
 
         MessageKind::UserInput { text } => vec![Line::from(vec![
-            Span::raw(format!("{}>  ", pad)),
+            Span::raw(format!("{}❯  ", pad)),
             Span::styled(text.clone(), default()), // was bright()
         ])],
 
@@ -89,7 +89,7 @@ fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
             if let Some(first) = lines.first_mut() {
                 first
                     .spans
-                    .insert(0, Span::styled(format!("{}›  ", pad), default() ));
+                    .insert(0, Span::styled(format!("{}❯  ", pad), default() ));
             }
             lines
         }
