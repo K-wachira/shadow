@@ -216,6 +216,22 @@ async fn handle_key_slash(
                         app_state.history_cursor = 0;
                     }
                 }
+                SlashAction::Ingest => {
+
+                }
+                
+                SlashAction::Reflect => {
+                    let (current_mind, logs_json) = gather_reflect_input(&engine.db)?;
+                    let ollama = Arc::clone(&engine.ollama);
+                    let tx = reflect_tx.clone();
+                    app_state.background_op_start = Some(Instant::now());
+                    tokio::spawn(async move {
+                        match reflect_with_input(&ollama, current_mind, logs_json).await {
+                            Ok(new_mind) => { let _ = tx.send(new_mind); }
+                            Err(e) => { eprintln!("reflect error: {}", e); }
+                        }
+                    });
+                }
                 SlashAction::Exit => {
                     if matches!(engine.assistant_state, AssistantState::Idle) {
                         return Ok(true);
