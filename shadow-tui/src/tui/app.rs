@@ -18,6 +18,8 @@ use shadow_core::mind::ShadowMind;
 use std::sync::Arc;
 use shadow_core::mind::gather_reflect_input;
 use shadow_core::mind::reflect_with_input;
+use tokio::sync::mpsc::error::TryRecvError;
+use shadow_core::model::ToolCall;
 
 enum SlashAction {
     New,
@@ -52,19 +54,17 @@ color_eyre::Result<()> {
 
     let mut app_state = TuiAppState::default();
     let mut input_buf = String::new();
-    let tick_rate = Duration::from_millis(100);
-    let mut last_tick = Instant::now();
-    let mut stream_start: Option<Instant> = None;
 
     loop {
         process_channels(
             &mut rx, &mut done_rx, &mut title_rx,
             &mut app_state, shadow_engine,
-            &mut stream_start, title_tx.clone(),
+            title_tx.clone(),
             &mut reflect_rx,
         ).await?;
 
-        update_tick(&mut app_state, stream_start, &mut last_tick, tick_rate);
+        update_tick(&mut app_state);
+        update_assistant_state(&mut app_state);
 
         app_state.input = input_buf.clone();
         app_state.cursor_pos = input_buf.chars().count();
@@ -88,7 +88,7 @@ color_eyre::Result<()> {
                 } else {
                     handle_key_normal(
                         key.code, &mut app_state, shadow_engine,
-                        &mut input_buf, &mut stream_start,
+                        &mut input_buf,
                         tx.clone(), done_tx.clone(),
                     ).await?
                 }
@@ -116,7 +116,6 @@ async fn process_channels(
     title_rx: &mut mpsc::UnboundedReceiver<String>,
     app_state: &mut TuiAppState,
     engine: &mut ShadowEngine,
-    stream_start: &mut Option<Instant>,
     title_tx: mpsc::UnboundedSender<String>,
     reflect_rx: &mut mpsc::UnboundedReceiver<ShadowMind>,
 
@@ -134,41 +133,63 @@ async fn process_channels(
         }
     }
 
-    if done_rx.try_recv().is_ok() {
-        if let Some(Message { kind: MessageKind::AssistantText { text }, .. }) = engine.messages.last() {
-            engine.on_stream_complete(&text.clone(), title_tx).await?;
+    match done_rx.try_recv() {
+        Ok(_) => {
+            if let Some(Message { kind: MessageKind::AssistantText { text }, .. }) = engine.messages.last() {
+                engine.on_stream_complete(&text.clone(), title_tx).await?;
+            }
+            app_state.stream_start = None;
         }
-        app_state.assistant_state = AssistantState::Idle;
-        *stream_start = None;
+        Err(TryRecvError::Disconnected) => {
+            eprintln!("stream task disconnected unexpectedly");
+            app_state.stream_start = None; // reset even on disconnect
+        }
+        Err(TryRecvError::Empty) => {}
     }
 
-    if let Ok(title) = title_rx.try_recv() {
-        engine.session_name = title.clone();
-        engine.db.update_session_title(engine.session_id, &title)?;
+    match title_rx.try_recv() {
+        Ok(title) => {
+            engine.session_name = title.clone();
+            engine.db.update_session_title(engine.session_id, &title)?;
+        }
+        Err(TryRecvError::Disconnected) => {
+            eprintln!("title generation task disconnected unexpectedly");
+        }
+        Err(TryRecvError::Empty) => {}
     }
     
-    if let Ok(new_mind) = reflect_rx.try_recv() {
-        engine.mind = new_mind;
-        app_state.assistant_state = AssistantState::Reflecting;
-        // optionally show a status message in the TUI
+    match reflect_rx.try_recv() {
+        Ok(new_mind) => {
+            engine.mind = new_mind;
+            app_state.background_op_start = None;
+        }
+        Err(TryRecvError::Disconnected) => {
+            // task died without sending — reset state
+            app_state.background_op_start = None;
+            eprintln!("reflect task disconnected unexpectedly");
+        }
+        Err(TryRecvError::Empty) => {} // still waiting, do nothing
     }
 
     Ok(())
 }
 
-fn update_tick(
-    app_state: &mut TuiAppState,
-    stream_start: Option<Instant>,
-    last_tick: &mut Instant,
-    tick_rate: Duration,
-) {
-    if last_tick.elapsed() >= tick_rate {
+
+fn update_tick(app_state: &mut TuiAppState) {
+    const TICK_RATE: Duration = Duration::from_millis(100);
+    if app_state.last_tick.elapsed() >= TICK_RATE {
         app_state.tick = app_state.tick.wrapping_add(1);
-        if let Some(start) = stream_start {
-            app_state.assistant_state = AssistantState::Thinking { secs: start.elapsed().as_secs() };
-        }
-        *last_tick = Instant::now();
+        app_state.last_tick = Instant::now();
     }
+}
+
+
+fn update_assistant_state(app_state: &mut TuiAppState) {
+    app_state.assistant_state = match (app_state.stream_start, app_state.background_op_start) {
+        (_, Some(start)) => AssistantState::Reflecting { secs: start.elapsed().as_secs() },
+        (Some(start), None) => AssistantState::Thinking { secs: start.elapsed().as_secs() },
+        (None, None) => AssistantState::Idle,
+    };
 }
 
 async fn handle_key_slash(
@@ -224,7 +245,7 @@ async fn handle_key_slash(
                     let (current_mind, logs_json) = gather_reflect_input(&engine.db)?;
                     let ollama = Arc::clone(&engine.ollama);
                     let tx = reflect_tx.clone();
-                    app_state.background_op_start = Some(Instant::now());
+                    app_state.stream_start = Some(Instant::now());
                     tokio::spawn(async move {
                         match reflect_with_input(&ollama, current_mind, logs_json).await {
                             Ok(new_mind) => { let _ = tx.send(new_mind); }
@@ -334,10 +355,10 @@ async fn handle_key_normal(
                 return Ok(false);
             }
             input_buf.clear();
-            *stream_start = Some(Instant::now());
 
             match engine.send_message(&prompt).await {
                 Ok(stream) => {
+                    app_state.stream_start = Some(Instant::now());
                     let mut stream = Box::pin(stream);
                     tokio::spawn(async move {
                         while let Some(chunk) = stream.next().await {
