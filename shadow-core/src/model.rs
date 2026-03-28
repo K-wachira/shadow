@@ -173,7 +173,7 @@ impl ToolCall {
     pub fn finish(&mut self, output: Vec<String>) {
         self.output_lines = output;
         self.completed = true;
-        self.state = ToolState::Collapsed;
+        self.state = ToolState::Expanded;
     }
 
     pub fn toggle_expand(&mut self) {
