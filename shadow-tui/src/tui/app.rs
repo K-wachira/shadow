@@ -237,7 +237,14 @@ async fn handle_key_slash(
                     }
                 }
                 SlashAction::Ingest => {
-
+                    match engine.ingest_icloud_logs() {
+                        Ok(count) => {
+                            let mut tool = ToolCall::new("Ingest", "iCloud logs");
+                            tool.finish(vec![format!("{} new logs ingested", count)]);
+                            engine.messages.push(Message::tool(tool));
+                        }
+                        Err(e) => eprintln!("ingest error: {}", e),
+                    }
                 }
                 
                 SlashAction::Reflect => {
