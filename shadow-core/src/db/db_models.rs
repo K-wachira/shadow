@@ -44,6 +44,7 @@ pub struct RawLog {
     pub log_type: Option<String>,
 }
 
+#[derive(serde::Serialize)]
 #[derive(Debug)]
 pub struct EntryLog {
     pub id: i32,
