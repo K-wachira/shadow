@@ -60,6 +60,9 @@ pub const SLASH_COMMANDS: &[SlashCommand] = &[
     SlashCommand { name: "/new", description: "start new session" },
     SlashCommand { name: "/delete", description: "delete current session" },
     SlashCommand { name: "/history", description: "list past sessions" },
+    SlashCommand { name: "/refect", description: "reflect .." },
+    SlashCommand { name: "/delete", description: "delete current session" },
+    SlashCommand { name: "/ingest", description: "ingest new logs from icloud" },
     SlashCommand { name: "/exit", description: "exit Shadow" },
 ];
 

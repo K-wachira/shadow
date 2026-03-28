@@ -19,10 +19,12 @@ pub struct ShadowEngine {
     pub model: String,
     pub assistant_state: AssistantState,
     pub messages: Vec<Message>,
+    pub mind: ShadowMind,
 }
 
 impl ShadowEngine {
     pub fn new(db: Arc<Database>, ollama: Arc<LlmClient>, model: &str) -> color_eyre::Result<Self> {
+        let mind = mind::load()?; 
         Ok(Self {
             db,
             ollama,
@@ -31,6 +33,7 @@ impl ShadowEngine {
             model: model.to_string(),
             assistant_state: AssistantState::Idle,
             messages: vec![Message::logo()],
+            mind,
         })
     }
     

@@ -14,6 +14,10 @@ use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use crate::tui::SLASH_COMMANDS;
 use crate::tui::SlashCommand;
+use shadow_core::mind::ShadowMind;
+use std::sync::Arc;
+use shadow_core::mind::gather_reflect_input;
+use shadow_core::mind::reflect_with_input;
 
 enum SlashAction {
     New,
@@ -28,6 +32,8 @@ impl SlashAction {
         match input.trim() {
             "/delete" => Self::Delete,
             "/new" => Self::New,
+            "/ingest" => Self::Ingest,
+            "/refect" => Self::Reflect,
             "/exit" => Self::Exit,
             "/history" => Self::History,
             _ => Self::Unknown(()),
@@ -40,6 +46,7 @@ color_eyre::Result<()> {
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
     let (done_tx, mut done_rx) = mpsc::unbounded_channel::<()>();
     let (title_tx, mut title_rx) = mpsc::unbounded_channel::<String>();
+    let (reflect_tx, mut reflect_rx) = mpsc::unbounded_channel::<ShadowMind>();
 
     let mut app_state = TuiAppState::default();
     let mut input_buf = String::new();
@@ -52,6 +59,7 @@ color_eyre::Result<()> {
             &mut rx, &mut done_rx, &mut title_rx,
             &mut app_state, shadow_engine,
             &mut stream_start, title_tx.clone(),
+            &mut reflect_rx,
         ).await?;
 
         update_tick(&mut app_state, stream_start, &mut last_tick, tick_rate);
@@ -72,7 +80,7 @@ color_eyre::Result<()> {
         let quit = match event::read()? {
             Event::Key(key) => {
                 if app_state.slash_mode {
-                    handle_key_slash(key.code, &mut app_state, shadow_engine, &mut input_buf)?
+                    handle_key_slash(key.code, &mut app_state, shadow_engine, &mut input_buf, reflect_tx.clone()).await?
                 } else if app_state.history_mode {
                     handle_key_history(key.code, &mut app_state, shadow_engine)?
                 } else {
@@ -108,6 +116,8 @@ async fn process_channels(
     engine: &mut ShadowEngine,
     stream_start: &mut Option<Instant>,
     title_tx: mpsc::UnboundedSender<String>,
+    reflect_rx: &mut mpsc::UnboundedReceiver<ShadowMind>,
+
 ) -> color_eyre::Result<()> {
     while let Ok(chunk) = rx.try_recv() {
         let chunk = chunk.replace("\\n", "\n");
@@ -134,6 +144,12 @@ async fn process_channels(
         engine.session_name = title.clone();
         engine.db.update_session_title(engine.session_id, &title)?;
     }
+    
+    if let Ok(new_mind) = reflect_rx.try_recv() {
+        engine.mind = new_mind;
+        app_state.assistant_state = AssistantState::Reflecting;
+        // optionally show a status message in the TUI
+    }
 
     Ok(())
 }
@@ -153,11 +169,12 @@ fn update_tick(
     }
 }
 
-fn handle_key_slash(
+async fn handle_key_slash(
     key: KeyCode,
     app_state: &mut TuiAppState,
     engine: &mut ShadowEngine,
     input_buf: &mut String,
+    reflect_tx: mpsc::UnboundedSender<ShadowMind>
 ) -> color_eyre::Result<bool> {
     match key {
         KeyCode::Esc => {
