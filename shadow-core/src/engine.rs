@@ -152,12 +152,13 @@ impl ShadowEngine {
         Ok(())
     }
     
-    pub fn ingest_icloud_logs(&self) -> color_eyre::Result<()> {
+    pub fn ingest_icloud_logs(&self) -> color_eyre::Result<usize> {
         let dir = dirs::home_dir()
             .unwrap()
             .join("Library/Mobile Documents/com~apple~CloudDocs/ShadowLogs/");
-        let _ = file_ingest(&self.db, &dir);
-        Ok(())
+        let count = file_ingest(&self.db, &dir)?;
+        eprintln!("ingest complete");
+        Ok(count)
     }
     
     pub fn list_logs(&self, limit: Option<i32>) -> color_eyre::Result<Vec<EntryLog>> {
