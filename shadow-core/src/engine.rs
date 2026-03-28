@@ -151,6 +151,18 @@ impl ShadowEngine {
         self.messages.push(Message::logo());
         Ok(())
     }
+    
+    pub fn ingest_icloud_logs(&self) -> color_eyre::Result<()> {
+        let dir = dirs::home_dir()
+            .unwrap()
+            .join("Library/Mobile Documents/com~apple~CloudDocs/ShadowLogs/");
+        let _ = file_ingest(&self.db, &dir);
+        Ok(())
+    }
+    
+    pub fn list_logs(&self, limit: Option<i32>) -> color_eyre::Result<Vec<EntryLog>> {
+        self.db.get_logs(limit)
+    }
 }
 
 #[cfg(test)]
