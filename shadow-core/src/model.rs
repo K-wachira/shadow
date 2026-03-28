@@ -103,9 +103,8 @@ impl AssistantState {
             AssistantState::Refining { secs } => {
                 Some(format!("Refining…  (esc to cancel, {}s)", secs))
             }
-            AssistantState::Reflecting => {
-            Some(format!("Reflecting…  (esc to cancel, {}s)", 1))
-
+            AssistantState::Reflecting { secs } => {
+                Some(format!("Reflecting…  (esc to cancel, {}s)", secs))
             }
         }
     }
