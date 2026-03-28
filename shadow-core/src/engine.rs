@@ -10,6 +10,10 @@ use crate::db::Sessions;
 use crate::db::SessionMessages;
 use crate::model::MessageKind;
 use tokio::sync::mpsc;
+use crate::ingest::file_ingest;
+use crate::db::EntryLog;
+use crate::mind::ShadowMind;
+use crate::mind;
 
 pub struct ShadowEngine {
     pub db: Arc<Database>,

@@ -23,6 +23,8 @@ enum SlashAction {
     New,
     Delete,
     History,
+    Ingest,
+    Reflect,
     Exit,
     Unknown(())
 }
