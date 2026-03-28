@@ -51,7 +51,6 @@ color_eyre::Result<()> {
     let (done_tx, mut done_rx) = mpsc::unbounded_channel::<()>();
     let (title_tx, mut title_rx) = mpsc::unbounded_channel::<String>();
     let (reflect_tx, mut reflect_rx) = mpsc::unbounded_channel::<ShadowMind>();
-
     let mut app_state = TuiAppState::default();
     let mut input_buf = String::new();
 
