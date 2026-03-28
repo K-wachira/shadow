@@ -17,7 +17,7 @@ impl LlmClient {
     }
     
     pub async fn ollama_ask(&self, prompt: &String) -> Result<String, OllamaError>{
-        let model = "qwen3.5:35b-a3b".to_string();
+        let model ="deepseek-r1:latest".to_string();
         let res = self.llm.generate(GenerationRequest::new(model, prompt)).await;
         
         match res {
