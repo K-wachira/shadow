@@ -344,7 +344,6 @@ async fn handle_key_normal(
     app_state: &mut TuiAppState,
     engine: &mut ShadowEngine,
     input_buf: &mut String,
-    stream_start: &mut Option<Instant>,
     tx: mpsc::UnboundedSender<String>,
     done_tx: mpsc::UnboundedSender<()>,
 ) -> color_eyre::Result<bool> {
