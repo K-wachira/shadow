@@ -1,8 +1,3 @@
-
-#[derive(Debug, Clone)]
-pub enum ShadowEngine {
-}
-
 #[derive(Debug, Clone)]
 pub enum MessageKind {
     Logo,
