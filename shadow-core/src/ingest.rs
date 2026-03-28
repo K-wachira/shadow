@@ -23,13 +23,14 @@ pub fn file_ingest(conn: &Database, dir: &PathBuf) -> color_eyre::Result<usize> 
                 if !*&file_name.contains(&".json".to_string()) || file_name.starts_with(".")   {
                     continue
                 };
-                let _ = conn.insert_file_ingest(&file_name, &dir);
-                // let _ = conn.insert(&process_json_file(&file_name, &dir)?);
+                if conn.insert_file_ingest(&file_name, &dir).is_ok() {
+                    count += 1;
+                }
             }
         }
         Err(e) => error!("Failed: {}", e),
     }
-    Ok(())
+    Ok(count)
 }
 
 pub fn get_files(dir: &PathBuf) -> Result<Vec<String>, String> {
