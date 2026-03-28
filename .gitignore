@@ -1,4 +1,8 @@
-/target
 /data
+.claude
+/target
 /md
 /mind
+/shadow-core/data
+/shadow-core/skill.md
+shadow.log
