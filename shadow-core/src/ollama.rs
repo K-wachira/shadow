@@ -30,7 +30,7 @@ impl LlmClient {
         &self, 
         prompt: &String
     ) -> Result<impl Stream<Item = Result<Vec<GenerationResponse>, OllamaError>>, OllamaError> {
-        let model = "qwen3.5:35b-a3b".to_string();
+        let model = "deepseek-r1:latest".to_string();
         
         let stream = self.llm
             .generate_stream(GenerationRequest::new(model, prompt.clone()))
