@@ -1,5 +1,6 @@
 use shadow_core::model::AssistantState;
 use shadow_core::db::Sessions;
+use std::time::Instant;
 
 #[derive(Debug)]
 pub struct TuiAppState {
@@ -21,6 +22,9 @@ pub struct TuiAppState {
     pub history_sessions: Vec<Sessions>,
     pub history_cursor: usize,
     pub slash_cursor: usize,
+    pub last_tick: Instant,
+    pub stream_start: Option<Instant>,
+    pub background_op_start: Option<Instant>,
 }
 
 impl Default for TuiAppState {
@@ -43,6 +47,10 @@ impl Default for TuiAppState {
             history_sessions: vec![],
             history_cursor: 0,
             slash_cursor: 0,
+            
+            last_tick: Instant::now(),
+            stream_start: None,
+            background_op_start: None,
         };
 
         // Logo is always the first message — it scrolls away as history grows.
