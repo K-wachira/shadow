@@ -77,7 +77,9 @@ pub enum AssistantState {
         secs: u64,
     },
     
-    Reflecting,
+    Reflecting{
+        secs: u64,
+    },
 }
 
 impl AssistantState {
