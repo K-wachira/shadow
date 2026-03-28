@@ -15,7 +15,8 @@ pub fn process_json_file(log_name: &String, dir: &PathBuf) -> Result<RawLog, Str
     Ok(raw)
 }
 
-pub fn file_ingest(conn: &Database, dir: &PathBuf) -> Result<(), String> {
+pub fn file_ingest(conn: &Database, dir: &PathBuf) -> color_eyre::Result<usize> {
+    let mut count = 0;
     match get_files(&dir) {
         Ok(files) => {
             for file_name in files {
