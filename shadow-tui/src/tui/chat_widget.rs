@@ -104,10 +104,6 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shado
         .iter()
         .enumerate()
         .map(|(i, session)| {
-            let date = chrono::DateTime::from_timestamp_millis(session.created_at_ms)
-                .map(|dt: chrono::DateTime<chrono::Utc>| dt.format("%d %b %Y").to_string())
-                .unwrap_or_else(|| "unknown".to_string());
-
             let title = if session.title.len() > 40 {
                 format!("{}…", &session.title[..40])
             } else {
@@ -118,7 +114,7 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shado
                 Line::from(vec![
                     Span::raw("  "),
                     Span::styled(
-                        format!("{:<42} {}", title, date),
+                        format!("{:<42} {}", title, format_timestamp(&session.created_at_ms.to_string())),
                         Style::default()
                             .fg(Color::Black)
                             .bg(Color::Cyan)
@@ -128,7 +124,7 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shado
             } else {
                 Line::from(vec![
                     Span::raw("  "),
-                    Span::styled(format!("{:<42} {}", title, date), dim()),
+                    Span::styled(format!("{:<42} {}", title, &session.created_at_ms.to_string()), dim()),
                 ])
             }
         })
