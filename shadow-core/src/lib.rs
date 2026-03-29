@@ -7,3 +7,4 @@ pub mod ollama;
 pub mod ask;
 pub mod engine;
 pub mod mind;
+pub mod utils;

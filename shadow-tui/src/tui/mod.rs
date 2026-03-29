@@ -8,7 +8,6 @@ mod chat_widget;
 mod logo;
 mod bottom_pane_widget;
 mod status_widget;
-mod utils;
 
 pub use app::run;
 pub use color::hex_color;

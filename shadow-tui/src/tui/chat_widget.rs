@@ -2,7 +2,9 @@ use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 use shadow_core::model::ToolCall;
 use shadow_core::model::ToolState;
-
+use shadow_core::engine::ShadowEngine;
+use shadow_core::utils::format_timestamp;
+use shadow_core::utils::truncate;
 use crate::tui::TuiAppState;
 use crate::tui::bright_bold;
 use crate::tui::default;
@@ -22,9 +24,6 @@ use ratatui::widgets::Block;
 use ratatui::widgets::Borders;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Wrap;
-use shadow_core::engine::ShadowEngine;
-use crate::tui::utils::truncate;
-use crate::tui::utils::format_timestamp;
 
 pub fn render_chat(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine) {
     if tui_state.history_mode {
