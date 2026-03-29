@@ -43,15 +43,7 @@ pub fn render_chat(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_en
         }
     }
 
-    // Scroll math: estimate total visual rows, then use Paragraph::scroll()
-    // to avoid double-wrapping that occurs when manually slicing lines.
     let height = area.height as usize;
-    // let width = area.width as usize;
-
-    // let total_visual: usize = all_lines.iter().map(|line| {
-    //     let len = line.width();
-    //     if len == 0 { 1 } else { (len + width - 1) / width }
-    // }).sum();
 
     let total_lines = all_lines.len();
     let max_scroll = total_lines.saturating_sub(height);
