@@ -16,22 +16,22 @@ pub fn process_json_file(log_name: &String, dir: &PathBuf) -> Result<RawLog, Str
     Ok(raw)
 }
 
-pub fn file_ingest(conn: &Database, dir: &PathBuf) -> color_eyre::Result<usize> {
-    let mut count = 0;
+pub fn file_ingest(conn: &Database, dir: &PathBuf) -> color_eyre::Result<Vec<EntryLog>> {
+    let mut ingested = vec![];
     match get_files(&dir) {
         Ok(files) => {
             for file_name in files {
                 if !*&file_name.contains(&".json".to_string()) || file_name.starts_with(".")   {
                     continue
                 };
-                if conn.insert_file_ingest(&file_name, &dir).is_ok() {
-                    count += 1;
+                if let Ok(Some(log)) = conn.insert_file_ingest(&file_name, dir) {
+                    ingested.push(log);
                 }
             }
         }
         Err(e) => error!("Failed: {}", e),
     }
-    Ok(count)
+    Ok(ingested)
 }
 
 pub fn get_files(dir: &PathBuf) -> Result<Vec<String>, String> {

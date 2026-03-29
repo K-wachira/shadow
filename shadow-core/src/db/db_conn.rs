@@ -109,13 +109,24 @@ impl Database {
     }
 
     // Inserts a single log
-    pub fn insert_log(&self, log: &RawLog) -> Result<(), rusqlite::Error> {
+    pub fn insert_log(&self, log: &RawLog) -> color_eyre::Result<EntryLog> {
         self.conn.execute(
             "INSERT INTO shadow_logs (content, energy, mood, weather, location, time_stamp, device, log_type)
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![&log.content, &log.energy, &log.mood, &log.weather, &log.location, &log.time_stamp, &log.device, &log.log_type],
         )?;
-        Ok(())
+        let id = self.conn.last_insert_rowid() as i32;
+        Ok(EntryLog {
+            id,
+            content: log.content.clone(),
+            energy: log.energy,
+            mood: log.mood,
+            weather: log.weather.clone(),
+            location: log.location.clone(),
+            time_stamp: log.time_stamp.clone(),
+            device: log.device.clone(),
+            log_type: log.log_type.clone(),
+        })
     }
 
     // Fetches all logs
@@ -137,7 +148,7 @@ impl Database {
                     weather: row.get::<_, Option<String>>(4)?,
                     location: row.get::<_, Option<String>>(5)?,
                     time_stamp: row.get::<_, String>(6)?,
-                    device: row.get::<_, String>(7)?,
+                    device: row.get::<_, Option<String>>(7)?,
                     log_type: row.get::<_, Option<String>>(8)?,
                 })
             })?
@@ -158,9 +169,9 @@ impl Database {
         Ok(exists)
     }
 
-    pub fn insert_file_ingest(&self, log_name: &String, dir: &PathBuf) -> Result<(), rusqlite::Error> {
+    pub fn insert_file_ingest(&self, log_name: &String, dir: &PathBuf) -> color_eyre::Result<Option<EntryLog>> {
         if self.file_logged(&log_name)? {
-            return Ok(());
+            return Ok(None);
         }
 
         let file_ing = FileIngest {
@@ -179,13 +190,13 @@ impl Database {
             ],
         )?;
 
-        match self.insert_log(&process_json_file(&log_name, &dir).unwrap()) {
-            Ok(_) => {}
-            Err(err) => {
-                error!("Some Error {err} when inserting from file")
+        match process_json_file(log_name, dir) {
+            Ok(raw_log) => Ok(Some(self.insert_log(&raw_log)?)),
+            Err(e) => {
+                error!("Failed to process {log_name}: {e}");
+                Ok(None)
             }
         }
-        Ok(())
     }
 
     pub fn get_file_ingests(&self, limit: Option<usize>,

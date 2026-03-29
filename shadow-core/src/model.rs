@@ -152,6 +152,7 @@ pub struct ToolCall {
     pub completed: bool,
     /// Subagent children — e.g. Worker spawning Shell calls
     pub children: Vec<ToolCall>,
+    pub payload: Option<ToolPayload>,
 }
 
 impl ToolCall {
@@ -163,6 +164,7 @@ impl ToolCall {
             state: ToolState::Running,
             completed: false,
             children: vec![],
+            payload: None
         }
     }
 
@@ -179,6 +181,11 @@ impl ToolCall {
             ToolState::Running => ToolState::Running,
         };
     }
+}
+
+#[derive(Debug, Clone)]
+ pub enum ToolPayload {
+    Logs(Vec<EntryLog>),
 }
 
 #[cfg(test)]

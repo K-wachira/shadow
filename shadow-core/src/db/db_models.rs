@@ -54,7 +54,7 @@ pub struct EntryLog {
     pub weather: Option<String>,
     pub location: Option<String>,
     pub time_stamp: String,
-    pub device: String,
+    pub device: Option<String>,
     pub log_type: Option<String>,
 }
 
