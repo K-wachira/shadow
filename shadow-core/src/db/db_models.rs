@@ -1,4 +1,5 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Sessions {
@@ -44,8 +45,7 @@ pub struct RawLog {
     pub log_type: Option<String>,
 }
 
-#[derive(serde::Serialize)]
-#[derive(Debug)]
+#[derive(serde::Serialize, Debug, Clone)]
 pub struct EntryLog {
     pub id: i32,
     pub content: String,
