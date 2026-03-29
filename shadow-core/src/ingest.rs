@@ -1,5 +1,6 @@
 use crate::db::Database;
 use crate::db::RawLog;
+use crate::db::EntryLog;
 
 use std::fs;
 use std::path::PathBuf;

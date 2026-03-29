@@ -23,6 +23,8 @@ use ratatui::widgets::Borders;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Wrap;
 use shadow_core::engine::ShadowEngine;
+use crate::tui::utils::truncate;
+use crate::tui::utils::format_timestamp;
 
 pub fn render_chat(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine) {
     if tui_state.history_mode {

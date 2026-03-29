@@ -1,3 +1,5 @@
+use crate::db::EntryLog;
+
 #[derive(Debug, Clone)]
 pub enum MessageKind {
     Logo,

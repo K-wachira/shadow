@@ -20,6 +20,8 @@ use shadow_core::mind::gather_reflect_input;
 use shadow_core::mind::reflect_with_input;
 use tokio::sync::mpsc::error::TryRecvError;
 use shadow_core::model::ToolCall;
+use shadow_core::model::ToolPayload;
+use crate::tui::utils::format_timestamp;
 
 enum SlashAction {
     New,
