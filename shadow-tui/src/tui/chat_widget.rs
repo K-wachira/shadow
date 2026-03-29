@@ -206,7 +206,7 @@ fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {
             for output_line in &tool.output_lines {
                 lines.push(Line::from(vec![
                     Span::styled(format!("{}└  ", pad), dim()),
-                    Span::styled(output_line.to_owned(), muted()),
+                    Span::styled(truncate(&output_line.to_owned(), 80), muted()),
                 ]));
             }
         }
