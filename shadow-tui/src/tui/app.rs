@@ -47,7 +47,7 @@ impl SlashAction {
     }
 }
 
-pub async fn run( mut terminal: DefaultTerminal,shadow_engine: &mut ShadowEngine) -> 
+pub async fn run( mut terminal: DefaultTerminal,shadow_engine: &mut ShadowEngine) ->
 color_eyre::Result<()> {
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
     let (done_tx, mut done_rx) = mpsc::unbounded_channel::<()>();
@@ -99,9 +99,8 @@ color_eyre::Result<()> {
             _ => false,
         };
 
-        if quit { 
-
-            break; 
+        if quit {
+            break;
         }
     }
 
@@ -158,7 +157,7 @@ async fn process_channels(
         }
         Err(TryRecvError::Empty) => {}
     }
-    
+
     match reflect_rx.try_recv() {
         Ok(new_mind) => {
             engine.mind = new_mind;
@@ -250,7 +249,7 @@ async fn handle_key_slash(
                         Err(e) => eprintln!("ingest error: {}", e),
                     }
                 }
-                
+
                 SlashAction::Reflect => {
                     let (current_mind, logs_json) = gather_reflect_input(&engine.db)?;
                     let ollama = Arc::clone(&engine.ollama);
@@ -421,4 +420,3 @@ fn handle_mouse(mouse: MouseEvent, app_state: &mut TuiAppState) {
         _ => {}
     }
 }
-
