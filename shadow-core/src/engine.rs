@@ -26,14 +26,13 @@ pub struct ShadowEngine {
 }
 
 impl ShadowEngine {
-    pub fn new(db: Arc<Database>, llm_client: Arc<LlmClient>, model: &str) -> color_eyre::Result<Self> {
+    pub fn new(db: Arc<Database>, llm_client: Arc<LlmClient>) -> color_eyre::Result<Self> {
         let mind = mind::load()?; 
         Ok(Self {
             db,
             llm_client,
             session_id: 0,
             session_name: String::from("Untitled Session"),
-            model: model.to_string(),
             assistant_state: AssistantState::Idle,
             messages: vec![Message::logo(String::new())],
             mind,
