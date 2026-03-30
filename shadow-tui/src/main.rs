@@ -7,7 +7,9 @@ use tracing_subscriber;
 use std::sync::Arc;
 use tui::run;
 use shadow_core::engine::ShadowEngine;
-use ratatui::{Terminal, TerminalOptions, Viewport};
+use ratatui::Terminal;
+use ratatui::TerminalOptions;
+use ratatui::Viewport;
 use ratatui::backend::CrosstermBackend;
 use std::io;
 
