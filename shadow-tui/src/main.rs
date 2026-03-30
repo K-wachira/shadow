@@ -12,6 +12,9 @@ use ratatui::TerminalOptions;
 use ratatui::Viewport;
 use ratatui::backend::CrosstermBackend;
 use std::io;
+use shadow_core::llm::LlmProvider;
+use ollama_rs::Ollama;
+
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -22,9 +25,14 @@ async fn cli_main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     tracing_subscriber::fmt().with_writer(std::io::stderr).init();
     let db_conn = Arc::new(Database::new("data/shadow.db")?);
-    let ollama_conn = Arc::new(LlmClient::init().map_err(|e| color_eyre::eyre::eyre!(e))?);
-    let model = "";
-    let mut shadow_engine = ShadowEngine::new(db_conn, ollama_conn, model)?;
+    
+    
+    let model = "deepseek-r1:latest";
+    let ollama = LlmProvider::Ollama(
+        Ollama::new("http://localhost".to_string(), 11434)
+    );
+    let ollama_conn = Arc::new(LlmClient::init(ollama, &model).map_err(|e| color_eyre::eyre::eyre!(e))?);
+    let mut shadow_engine = ShadowEngine::new(db_conn, ollama_conn, &model)?;
     
     crossterm::terminal::enable_raw_mode()?;
     crossterm::execute!(io::stdout(), crossterm::event::EnableMouseCapture)?;

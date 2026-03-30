@@ -17,7 +17,7 @@ use crate::mind;
 
 pub struct ShadowEngine {
     pub db: Arc<Database>,
-    pub ollama: Arc<LlmClient>,
+    pub llm_client: Arc<LlmClient>,
     pub session_id: i64,
     pub session_name: String,
     pub model: String,
@@ -27,11 +27,11 @@ pub struct ShadowEngine {
 }
 
 impl ShadowEngine {
-    pub fn new(db: Arc<Database>, ollama: Arc<LlmClient>, model: &str) -> color_eyre::Result<Self> {
+    pub fn new(db: Arc<Database>, llm_client: Arc<LlmClient>, model: &str) -> color_eyre::Result<Self> {
         let mind = mind::load()?; 
         Ok(Self {
             db,
-            ollama,
+            llm_client,
             session_id: 0,
             session_name: String::from("Untitled Session"),
             model: model.to_string(),
@@ -65,16 +65,13 @@ impl ShadowEngine {
         self.assistant_state = AssistantState::Thinking { secs: 0 };
     
         let enriched = ask(&prompt.to_string(), &self.db, &self.messages).map_err(|e| color_eyre::eyre::eyre!(e))?;
-        let ollama = Arc::clone(&self.ollama);
+        let llm_client = Arc::clone(&self.llm_client);
     
         let stream = async_stream::stream! {
-            if let Ok(mut s) = ollama.ollama_ask_stream(&enriched).await {
+            if let Ok(s) = llm_client.llm_ask_stream(&enriched).await {
+                let mut s = s;
                 while let Some(chunk) = s.next().await {
-                    if let Ok(res) = chunk {
-                        for r in res {
-                            yield r.response;
-                        }
-                    }
+                    yield chunk;
                 }
             }
         };
@@ -111,7 +108,7 @@ impl ShadowEngine {
     }
     
     fn spawn_title_generation(&mut self, title_tx: mpsc::UnboundedSender<String>)  {
-        let ollama = Arc::clone(&self.ollama);
+        let llm_client = Arc::clone(&self.llm_client);
 
         // grab first user + assistant exchange
         let context: String = self.messages.iter()
@@ -129,7 +126,7 @@ impl ShadowEngine {
                 "Generate a short session title (5 words max). Return only the title as plain text, nothing else.\n\n{}",
                 context
             );
-            match ollama.ollama_ask(&prompt).await {
+            match llm_client.llm_ask(&prompt).await {
                 Ok(title) => {
                     let _ = title_tx.send(title.trim().to_string());
                 }
@@ -171,12 +168,20 @@ mod tests {
     use super::*;
     use crate::db::Database;
     use crate::model::MessageKind;
+    use ollama_rs::Ollama;
+    use crate::llm::LlmProvider;
 
     fn test_engine() -> ShadowEngine {
         let db = Arc::new(Database::new(":memory:").expect("in-memory db"));
         // LlmClient::init() only stores a URL — no actual connection is made here.
-        let ollama = Arc::new(LlmClient::init().expect("llm client init"));
-        ShadowEngine::new(db, ollama, "test-model").expect("engine init")
+        // 
+        let model = "llama3.2";
+        let ollama = LlmProvider::Ollama(
+            Ollama::new("http://localhost".to_string(), 11434)
+        );
+        let llm_conn = Arc::new(LlmClient::init(ollama, &model).map_err(|e| color_eyre::eyre::eyre!(e)).unwrap());
+
+        ShadowEngine::new(db, llm_conn, "test-model").expect("engine init")
     }
 
     // ── Construction ──────────────────────────────────────────────────────────

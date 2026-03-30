@@ -252,11 +252,11 @@ async fn handle_key_slash(
 
                 SlashAction::Reflect => {
                     let (current_mind, logs_json) = gather_reflect_input(&engine.db)?;
-                    let ollama = Arc::clone(&engine.ollama);
+                    let llm_client = Arc::clone(&engine.llm_client);
                     let tx = reflect_tx.clone();
                     app_state.stream_start = Some(Instant::now());
                     tokio::spawn(async move {
-                        match reflect_with_input(&ollama, current_mind, logs_json).await {
+                        match reflect_with_input(&llm_client, current_mind, logs_json).await {
                             Ok(new_mind) => { let _ = tx.send(new_mind); }
                             Err(e) => { eprintln!("reflect error: {}", e); }
                         }
