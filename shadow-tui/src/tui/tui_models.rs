@@ -5,7 +5,6 @@ use std::time::Instant;
 #[derive(Debug)]
 pub struct TuiAppState {
     pub input: String,          // what the user is typing
-    pub model: String, // "gemma3:12b"
     pub yolo_mode: bool,
     pub assistant_state: AssistantState,
     pub rename_mode: bool,
