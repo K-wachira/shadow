@@ -1,0 +1,19 @@
+command = "serve"
+
+[server]
+host = "0.0.0.0"
+port = 1234
+
+[runtime]
+max_seqs = 32
+
+[[models]]
+kind = "auto"
+model_id = "Qwen/Qwen3-4B"
+dtype = "auto"
+
+[models.quantization]
+in_situ_quant = "AFQ6"
+
+[models.device]
+device_layers = ["0:36"]
