@@ -8,27 +8,15 @@ const DIM: Color = Color::Rgb(120, 120, 130);
 const BORDER: Color = Color::Rgb(80, 80, 90);
 
 // Mascot pixel art using block elements
-// const MASCOT: [&str; 6] = [
-//     "  ██████  ",
-//     "  █ ██ █  ",
-//     "  ██████  ",
-//     "  ██  ██  ",
-//     "  █    █  ",
-//     "          ",
-// ];
-// const MASCOT: [&str; 2] = [
-//     "⠀⠀⡤⢤⠀⣄⢄⡤⡀⡠⡀⡄⠀⡄⠀⠀",
-//     "⠀⠀⠭⠿⠉⠿⠹⠧⠊⠢⠊⠧⠧⠇⠀⠀",
-// ];
 
 const MASCOT: [&str; 5] = [
-    "                                ",
-    "█▀▀█ █▄▀▄█▀▄▀▄█   █             ",
-    "▀▀██▀██▀██ █ ██ ▄ █             ",
-    "▀▀▀▀ ▀▀ ▀▀▀ ▀ ▀▀▀▀▀             ",
-    "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀             ",
+    "                    ",
+    "█▀▀█ █▄▀▄█▀▄▀▄█   █ ",
+    "▀▀██▀██▀██ █ ██ ▄ █ ",
+    "▀▀▀▀ ▀▀ ▀▀▀ ▀ ▀▀▀▀▀ ",
+    "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀ ",
 ];
-pub fn logo_lines() -> Vec<Line<'static>> {
+pub fn logo_lines( model_name: &String ) -> Vec<Line<'static>> {
     let dim = Style::default().fg(DIM);
     let border = Style::default().fg(BORDER);
     let mascot_style = Style::default().fg(ACCENT);
@@ -46,9 +34,14 @@ pub fn logo_lines() -> Vec<Line<'static>> {
         let right_pad = total_pad - left_pad;
         format!("{}{}{}", " ".repeat(left_pad), s, " ".repeat(right_pad))
     };
+    
+    let mode_name_logo = if model_name.is_empty() {
+        " · ".to_string()
+    } else {
+        format!("· {} · ", model_name)
+    };
 
-
-    let border_row = |content: &'static str, style: Style| -> Line<'static> {
+    let border_row = |content: &str, style: Style| -> Line<'static> {
         Line::from(vec![
             Span::styled("│", border),
             Span::styled(pad(content), style),
@@ -89,7 +82,7 @@ pub fn logo_lines() -> Vec<Line<'static>> {
 
 
         // Meta info
-        border_row("kelvin ·  gemma3:12b  ·  v0.1.0", dim),
+        border_row(&format!("kelvin {} v0.1.0", mode_name_logo).as_ref(), dim),
 
         
         Line::from(Span::styled(bottom, border)),

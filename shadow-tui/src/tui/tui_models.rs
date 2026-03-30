@@ -5,10 +5,9 @@ use std::time::Instant;
 #[derive(Debug)]
 pub struct TuiAppState {
     pub input: String,          // what the user is typing
-    pub model: String, // "gemma3:12b"
     pub yolo_mode: bool,
     pub assistant_state: AssistantState,
-
+    pub rename_mode: bool,
     pub cursor_pos: usize,
     /// Lines scrolled up from the bottom (0 = latest content visible)
     pub scroll_offset: usize,
@@ -31,7 +30,7 @@ impl Default for TuiAppState {
     fn default() -> Self {
         let state = Self {
             input: String::new(),
-            model: "llama3.2".to_string(),
+
             assistant_state: AssistantState::Idle,
 
             cursor_pos: 0,
@@ -40,7 +39,7 @@ impl Default for TuiAppState {
             tick: 0,
             yolo_mode: false,
             // context_logs: vec![],
-
+            rename_mode: false,
             slash_mode: false,   // typing a slash command
             history_mode: false, // navigating session list
             slash_input: String::new(),   // what's been typed after "/"
@@ -52,9 +51,6 @@ impl Default for TuiAppState {
             stream_start: None,
             background_op_start: None,
         };
-
-        // Logo is always the first message — it scrolls away as history grows.
-        // No conditional rendering needed.
         state
     }
 }
@@ -70,6 +66,7 @@ pub const SLASH_COMMANDS: &[SlashCommand] = &[
     SlashCommand { name: "/refect", description: "reflect .." },
     SlashCommand { name: "/delete", description: "delete current session" },
     SlashCommand { name: "/ingest", description: "ingest new logs from icloud" },
+    SlashCommand { name: "/rename", description: "rename session title" },
     SlashCommand { name: "/exit", description: "exit Shadow" },
 ];
 
@@ -81,7 +78,6 @@ mod tests {
     fn default_state_has_correct_initial_values() {
         let state = TuiAppState::default();
         assert!(state.input.is_empty());
-        assert_eq!(state.model, "llama3.2");
         assert_eq!(state.scroll_offset, 0);
         assert!(state.auto_scroll);
         assert_eq!(state.tick, 0);

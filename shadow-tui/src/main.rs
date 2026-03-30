@@ -2,7 +2,7 @@ mod tui;
 
 use shadow_core::*;
 use db::Database;
-use ollama::LlmClient;
+use llm::LlmClient;
 use tracing_subscriber;
 use std::sync::Arc;
 use tui::run;
@@ -22,10 +22,21 @@ async fn cli_main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     tracing_subscriber::fmt().with_writer(std::io::stderr).init();
     let db_conn = Arc::new(Database::new("data/shadow.db")?);
-    let ollama_conn = Arc::new(LlmClient::init().map_err(|e| color_eyre::eyre::eyre!(e))?);
-    let model = "";
-    let mut shadow_engine = ShadowEngine::new(db_conn, ollama_conn, model)?;
     
+    
+
+    let model = "deepseek-r1:latest";
+    let provider = "ollama";
+    
+    // let model = "Qwen/Qwen3-4B";
+    // let provider = "mistralrs";
+    
+    let llm_client = Arc::new(
+        LlmClient::init(provider, model).await
+            .map_err(|e| color_eyre::eyre::eyre!(e))?
+    );
+    
+    let mut shadow_engine = ShadowEngine::new(db_conn, llm_client)?;
     crossterm::terminal::enable_raw_mode()?;
     crossterm::execute!(io::stdout(), crossterm::event::EnableMouseCapture)?;
     let height = crossterm::terminal::size()?.1;

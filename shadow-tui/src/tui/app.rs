@@ -29,6 +29,7 @@ enum SlashAction {
     History,
     Ingest,
     Reflect,
+    Rename,
     Exit,
     Unknown(())
 }
@@ -40,6 +41,7 @@ impl SlashAction {
             "/new" => Self::New,
             "/ingest" => Self::Ingest,
             "/refect" => Self::Reflect,
+            "/rename" => Self::Rename,
             "/exit" => Self::Exit,
             "/history" => Self::History,
             _ => Self::Unknown(()),
@@ -252,15 +254,21 @@ async fn handle_key_slash(
 
                 SlashAction::Reflect => {
                     let (current_mind, logs_json) = gather_reflect_input(&engine.db)?;
-                    let ollama = Arc::clone(&engine.ollama);
+                    let llm_client = Arc::clone(&engine.llm_client);
                     let tx = reflect_tx.clone();
                     app_state.stream_start = Some(Instant::now());
                     tokio::spawn(async move {
-                        match reflect_with_input(&ollama, current_mind, logs_json).await {
+                        match reflect_with_input(&llm_client, current_mind, logs_json).await {
                             Ok(new_mind) => { let _ = tx.send(new_mind); }
                             Err(e) => { eprintln!("reflect error: {}", e); }
                         }
                     });
+                }
+                SlashAction::Rename => {
+                    app_state.rename_mode = true;
+                    input_buf.clear();
+                    input_buf.push_str(engine.session_name.clone().as_str());
+                    // app_state.input = engine.session_name.clone();
                 }
                 SlashAction::Exit => {
                     if matches!(engine.assistant_state, AssistantState::Idle) {
@@ -308,13 +316,12 @@ fn handle_key_history(
         KeyCode::Enter => {
             let selected = &app_state.history_sessions[app_state.history_cursor];
             let selected_id = selected.id;
-            let selected_model = selected.model.clone().unwrap_or_else(|| app_state.model.clone());
             let selected_title = selected.title.clone();
 
             match engine.load_session(selected_id) {
                 Ok(messages) => {
                     engine.messages.clear();
-                    engine.messages.push(Message::logo());
+                    engine.messages.push(Message::logo(&engine.llm_client.model_name));
                     for msg in messages {
                         match msg.role.as_str() {
                             "user" => engine.messages.push(Message::user(msg.content)),
@@ -324,7 +331,6 @@ fn handle_key_history(
                     }
                     engine.session_id = selected_id;
                     engine.session_name = selected_title;
-                    engine.model = selected_model;
                     app_state.history_mode = false;
                     app_state.history_sessions = vec![];
                     app_state.history_cursor = 0;
@@ -360,6 +366,18 @@ async fn handle_key_normal(
         KeyCode::Enter => {
             let prompt = input_buf.trim().to_string();
             if prompt.is_empty() {
+                return Ok(false);
+            }
+            if app_state.rename_mode {
+                match engine.db.update_session_title(engine.session_id, input_buf) {
+                    Ok(()) => {
+                        engine.session_name = input_buf.clone();
+                    },
+                    Err(e) => {
+                        eprintln!("Error on title rename: {}", e);
+                    }
+                }     
+                input_buf.clear();
                 return Ok(false);
             }
             input_buf.clear();

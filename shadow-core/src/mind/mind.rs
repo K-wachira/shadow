@@ -6,7 +6,7 @@ use crate::mind::mind_model::Meta;
 use std::collections::HashMap;
 use crate::db::Database;
 use std::sync::Arc;
-use crate::ollama::LlmClient;
+use crate::llm::LlmClient;
 use serde_json;
 
 const MIND_SKILL_PATH: &str = "shadow-core/skill.md/mind_skill.md";
@@ -23,14 +23,14 @@ pub fn gather_reflect_input(db: &Arc<Database>) -> Result<(String, String)> {
 }
 
 // spawnable — no db access
-pub async fn reflect_with_input(ollama: &Arc<LlmClient>, current_mind: String, logs_json: String) -> Result<ShadowMind> {
+pub async fn reflect_with_input(llm_client: &Arc<LlmClient>, current_mind: String, logs_json: String) -> Result<ShadowMind> {
     let skill = std::fs::read_to_string(MIND_SKILL_PATH)?;
 
     let prompt = format!(
         "{skill}\n\n--- Current shadow.mind ---\n{current_mind}\n\n--- Recent Logs ---\n{logs_json}\n\n---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation.",
     );
 
-    let response = ollama.ollama_ask(&prompt).await
+    let response = llm_client.llm_ask(&prompt).await
         .map_err(|e| color_eyre::eyre::eyre!(e))?;
 
     let new_mind: ShadowMind = json5::from_str(&response)

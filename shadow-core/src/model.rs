@@ -2,7 +2,7 @@ use crate::db::EntryLog;
 
 #[derive(Debug, Clone)]
 pub enum MessageKind {
-    Logo,
+    Logo { text: String },
 
     UserInput { text: String },
 
@@ -21,9 +21,9 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn logo() -> Self {
+    pub fn logo(text: impl Into<String>) -> Self {
         Self {
-            kind: MessageKind::Logo,
+            kind: MessageKind::Logo { text: text.into() },
             indent: 0,
         }
     }
@@ -216,8 +216,8 @@ mod tests {
 
     #[test]
     fn message_logo_sets_logo_kind() {
-        let msg = Message::logo();
-        assert!(matches!(msg.kind, MessageKind::Logo));
+        let msg = Message::logo("Model");
+        assert!(matches!(msg.kind, MessageKind::Logo{ text } if text == "Model"));
         assert_eq!(msg.indent, 0);
     }
 
