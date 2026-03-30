@@ -1,7 +1,7 @@
 use crate::ask::ask;
 use crate::db::Database;
 use crate::ingest::file_ingest;
-use crate::ollama::LlmClient;
+use crate::llm::LlmClient;
 
 use tokio_stream::StreamExt;
 use tracing::error;

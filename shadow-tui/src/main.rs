@@ -2,7 +2,7 @@ mod tui;
 
 use shadow_core::*;
 use db::Database;
-use ollama::LlmClient;
+use llm::LlmClient;
 use tracing_subscriber;
 use std::sync::Arc;
 use tui::run;

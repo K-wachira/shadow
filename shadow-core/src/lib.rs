@@ -3,7 +3,7 @@ pub mod db;
 pub mod handlers;
 pub mod ingest;
 pub mod model;
-pub mod ollama;
+pub mod llm;
 pub mod ask;
 pub mod engine;
 pub mod mind;

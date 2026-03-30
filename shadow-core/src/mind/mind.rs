@@ -6,7 +6,7 @@ use crate::mind::mind_model::Meta;
 use std::collections::HashMap;
 use crate::db::Database;
 use std::sync::Arc;
-use crate::ollama::LlmClient;
+use crate::llm::LlmClient;
 use serde_json;
 
 const MIND_SKILL_PATH: &str = "shadow-core/skill.md/mind_skill.md";

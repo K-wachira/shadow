@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use crate::db::Database;
-use crate::ollama::LlmClient;
+use crate::llm::LlmClient;
 use crate::model::Message;
 use crate::model::AssistantState;
 use tokio_stream::Stream;
