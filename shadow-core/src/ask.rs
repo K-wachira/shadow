@@ -104,7 +104,7 @@ mod tests {
     fn ask_ignores_logo_and_tool_messages_in_history() {
         let db = test_db();
         let messages = vec![
-            Message::logo(),
+            Message::logo("Model Name"),
             Message::user("Hello"),
             Message::thought("thinking..."),
         ];

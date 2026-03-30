@@ -31,7 +31,7 @@ impl Default for TuiAppState {
     fn default() -> Self {
         let state = Self {
             input: String::new(),
-            model: "llama3.2".to_string(),
+
             assistant_state: AssistantState::Idle,
 
             cursor_pos: 0,
@@ -52,9 +52,6 @@ impl Default for TuiAppState {
             stream_start: None,
             background_op_start: None,
         };
-
-        // Logo is always the first message — it scrolls away as history grows.
-        // No conditional rendering needed.
         state
     }
 }
@@ -82,7 +79,6 @@ mod tests {
     fn default_state_has_correct_initial_values() {
         let state = TuiAppState::default();
         assert!(state.input.is_empty());
-        assert_eq!(state.model, "llama3.2");
         assert_eq!(state.scroll_offset, 0);
         assert!(state.auto_scroll);
         assert_eq!(state.tick, 0);

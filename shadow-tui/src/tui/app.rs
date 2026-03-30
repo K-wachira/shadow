@@ -316,13 +316,12 @@ fn handle_key_history(
         KeyCode::Enter => {
             let selected = &app_state.history_sessions[app_state.history_cursor];
             let selected_id = selected.id;
-            let selected_model = selected.model.clone().unwrap_or_else(|| app_state.model.clone());
             let selected_title = selected.title.clone();
 
             match engine.load_session(selected_id) {
                 Ok(messages) => {
                     engine.messages.clear();
-                    engine.messages.push(Message::logo());
+                    engine.messages.push(Message::logo(&engine.llm_client.model_name));
                     for msg in messages {
                         match msg.role.as_str() {
                             "user" => engine.messages.push(Message::user(msg.content)),
@@ -332,7 +331,6 @@ fn handle_key_history(
                     }
                     engine.session_id = selected_id;
                     engine.session_name = selected_title;
-                    engine.model = selected_model;
                     app_state.history_mode = false;
                     app_state.history_sessions = vec![];
                     app_state.history_cursor = 0;

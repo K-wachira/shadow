@@ -20,7 +20,6 @@ pub struct ShadowEngine {
     pub llm_client: Arc<LlmClient>,
     pub session_id: i64,
     pub session_name: String,
-    pub model: String,
     pub assistant_state: AssistantState,
     pub messages: Vec<Message>,
     pub mind: ShadowMind,
@@ -36,13 +35,13 @@ impl ShadowEngine {
             session_name: String::from("Untitled Session"),
             model: model.to_string(),
             assistant_state: AssistantState::Idle,
-            messages: vec![Message::logo()],
+            messages: vec![Message::logo(String::new())],
             mind,
         })
     }
     
     fn start_session(&mut self) -> color_eyre::Result<()> {
-        let session_id = self.db.create_session(&self.session_name, &self.model)?;
+        let session_id = self.db.create_session(&self.session_name, &self.llm_client.model_name)?;
         self.session_id = session_id;
         Ok(())
     }
@@ -50,7 +49,7 @@ impl ShadowEngine {
     pub fn start_new_session(&mut self){
         self.session_name = String::from("Untitled Session");
         self.session_id = 0;
-        self.messages = vec![Message::logo()];
+        self.messages = vec![Message::logo(&self.llm_client.model_name)];
         self.assistant_state = AssistantState::Idle;
     }
     
@@ -84,7 +83,7 @@ impl ShadowEngine {
             self.session_id,
             "assistant",
             response,
-            Some(&self.model),
+            Some(&self.llm_client.model_name),
         )?;
         self.assistant_state = AssistantState::Idle;
 
@@ -145,7 +144,7 @@ impl ShadowEngine {
         self.session_name = "Untitled Session".to_string();
         self.assistant_state = AssistantState::Idle;
         self.messages.clear();
-        self.messages.push(Message::logo());
+        self.messages.push(Message::logo(&self.llm_client.model_name));
         Ok(())
     }
     

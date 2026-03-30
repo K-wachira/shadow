@@ -64,7 +64,7 @@ fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
     let pad = "  ".repeat(msg.indent as usize);
 
     match &msg.kind {
-        MessageKind::Logo => logo_lines(),
+        MessageKind::Logo { text } => logo_lines(text),
 
         MessageKind::UserInput { text } => vec![Line::from(vec![
             Span::raw(format!("{}❯  ", pad)),

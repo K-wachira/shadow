@@ -23,7 +23,7 @@ pub fn render_bottom_pane(f: &mut Frame, area: Rect, tui_state: &TuiAppState, sh
     // normal statusbar
     let left = format!("~ {}", shadow_engine.session_name);
 
-    let right = format!("{}  100% left", tui_state.model);
+    let right = format!("{}  100% left", &shadow_engine.llm_client.model_name);
     let padding = area.width.saturating_sub((left.len() + right.len()) as u16);
 
     let line = Line::from(vec![
