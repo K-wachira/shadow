@@ -8,25 +8,13 @@ const DIM: Color = Color::Rgb(120, 120, 130);
 const BORDER: Color = Color::Rgb(80, 80, 90);
 
 // Mascot pixel art using block elements
-// const MASCOT: [&str; 6] = [
-//     "  ██████  ",
-//     "  █ ██ █  ",
-//     "  ██████  ",
-//     "  ██  ██  ",
-//     "  █    █  ",
-//     "          ",
-// ];
-// const MASCOT: [&str; 2] = [
-//     "⠀⠀⡤⢤⠀⣄⢄⡤⡀⡠⡀⡄⠀⡄⠀⠀",
-//     "⠀⠀⠭⠿⠉⠿⠹⠧⠊⠢⠊⠧⠧⠇⠀⠀",
-// ];
 
 const MASCOT: [&str; 5] = [
-    "                                ",
-    "█▀▀█ █▄▀▄█▀▄▀▄█   █             ",
-    "▀▀██▀██▀██ █ ██ ▄ █             ",
-    "▀▀▀▀ ▀▀ ▀▀▀ ▀ ▀▀▀▀▀             ",
-    "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀             ",
+    "                    ",
+    "█▀▀█ █▄▀▄█▀▄▀▄█   █ ",
+    "▀▀██▀██▀██ █ ██ ▄ █ ",
+    "▀▀▀▀ ▀▀ ▀▀▀ ▀ ▀▀▀▀▀ ",
+    "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀ ",
 ];
 pub fn logo_lines( model_name: &String ) -> Vec<Line<'static>> {
     let dim = Style::default().fg(DIM);
