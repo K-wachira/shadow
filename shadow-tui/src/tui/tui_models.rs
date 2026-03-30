@@ -8,7 +8,7 @@ pub struct TuiAppState {
     pub model: String, // "gemma3:12b"
     pub yolo_mode: bool,
     pub assistant_state: AssistantState,
-
+    pub rename_mode: bool,
     pub cursor_pos: usize,
     /// Lines scrolled up from the bottom (0 = latest content visible)
     pub scroll_offset: usize,
@@ -40,7 +40,7 @@ impl Default for TuiAppState {
             tick: 0,
             yolo_mode: false,
             // context_logs: vec![],
-
+            rename_mode: false,
             slash_mode: false,   // typing a slash command
             history_mode: false, // navigating session list
             slash_input: String::new(),   // what's been typed after "/"
@@ -70,6 +70,7 @@ pub const SLASH_COMMANDS: &[SlashCommand] = &[
     SlashCommand { name: "/refect", description: "reflect .." },
     SlashCommand { name: "/delete", description: "delete current session" },
     SlashCommand { name: "/ingest", description: "ingest new logs from icloud" },
+    SlashCommand { name: "/rename", description: "rename session title" },
     SlashCommand { name: "/exit", description: "exit Shadow" },
 ];
 

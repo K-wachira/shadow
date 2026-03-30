@@ -29,6 +29,7 @@ enum SlashAction {
     History,
     Ingest,
     Reflect,
+    Rename,
     Exit,
     Unknown(())
 }
@@ -40,6 +41,7 @@ impl SlashAction {
             "/new" => Self::New,
             "/ingest" => Self::Ingest,
             "/refect" => Self::Reflect,
+            "/rename" => Self::Rename,
             "/exit" => Self::Exit,
             "/history" => Self::History,
             _ => Self::Unknown(()),
@@ -262,6 +264,12 @@ async fn handle_key_slash(
                         }
                     });
                 }
+                SlashAction::Rename => {
+                    app_state.rename_mode = true;
+                    input_buf.clear();
+                    input_buf.push_str(engine.session_name.clone().as_str());
+                    // app_state.input = engine.session_name.clone();
+                }
                 SlashAction::Exit => {
                     if matches!(engine.assistant_state, AssistantState::Idle) {
                         return Ok(true);
@@ -360,6 +368,18 @@ async fn handle_key_normal(
         KeyCode::Enter => {
             let prompt = input_buf.trim().to_string();
             if prompt.is_empty() {
+                return Ok(false);
+            }
+            if app_state.rename_mode {
+                match engine.db.update_session_title(engine.session_id, input_buf) {
+                    Ok(()) => {
+                        engine.session_name = input_buf.clone();
+                    },
+                    Err(e) => {
+                        eprintln!("Error on title rename: {}", e);
+                    }
+                }     
+                input_buf.clear();
                 return Ok(false);
             }
             input_buf.clear();
