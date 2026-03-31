@@ -8,6 +8,7 @@ use crate::db::Database;
 use std::sync::Arc;
 use crate::llm::LlmClient;
 use serde_json;
+use crate::utils::format_timestamp;
 
 const MIND_SKILL_PATH: &str = "shadow-core/skill.md/mind_skill.md";
 const MIND_PATH: &str = "shadow-core/data/shadowmind.json5";
