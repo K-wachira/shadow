@@ -84,5 +84,5 @@ pub fn init() -> ShadowMind {
 }
 
 pub fn today() -> String {
-    Utc::now().format("%Y-%m-%d").to_string()
+    format_timestamp(Utc::now().timestamp_millis().to_string().as_ref())
 }

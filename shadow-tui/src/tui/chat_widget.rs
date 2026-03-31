@@ -123,7 +123,7 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shado
             } else {
                 Line::from(vec![
                     Span::raw("  "),
-                    Span::styled(format!("{:<42} {}", title, &session.created_at_ms.to_string()), dim()),
+                    Span::styled(format!("{:<42} {}", title, format_timestamp(&session.created_at_ms.to_string())), dim()),
                 ])
             }
         })
