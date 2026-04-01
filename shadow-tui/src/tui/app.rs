@@ -22,7 +22,8 @@ use tokio::sync::mpsc::error::TryRecvError;
 use shadow_core::model::ToolCall;
 use shadow_core::model::ToolPayload;
 use shadow_core::utils::format_timestamp;
-
+use serde_json;
+    
 enum SlashAction {
     New,
     Delete,
@@ -31,6 +32,7 @@ enum SlashAction {
     Reflect,
     Rename,
     Exit,
+    Memory,
     Unknown(())
 }
 
@@ -44,6 +46,7 @@ impl SlashAction {
             "/rename" => Self::Rename,
             "/exit" => Self::Exit,
             "/history" => Self::History,
+            "/memory" => Self::Memory,
             _ => Self::Unknown(()),
         }
     }
@@ -270,6 +273,25 @@ async fn handle_key_slash(
                     input_buf.push_str(engine.session_name.clone().as_str());
                     // app_state.input = engine.session_name.clone();
                 }
+                SlashAction::Memory => {
+                    let path = shadow_core::mind::mind_path();
+                    let expanded = false;
+                    match std::fs::read_to_string(&path) {
+                        Ok(raw) => {
+                            match json5::from_str::<serde_json::Value>(&raw) {
+                                Ok(value) => {
+                                    let tree = shadow_core::json_tree::JsonTree::from_value(&value, expanded);
+                                    let msg_idx = engine.messages.len();
+                                    engine.messages.push(Message::memory_tree(tree));
+                                    app_state.memory_focus = Some(msg_idx);
+                                }
+                                Err(e) => eprintln!("failed to parse shadow.mind: {}", e),
+                            }
+                        }
+                        Err(e) => eprintln!("failed to read shadow.mind: {}", e),
+                    }
+                }
+
                 SlashAction::Exit => {
                     if matches!(engine.assistant_state, AssistantState::Idle) {
                         return Ok(true);
@@ -362,6 +384,30 @@ async fn handle_key_normal(
     tx: mpsc::UnboundedSender<String>,
     done_tx: mpsc::UnboundedSender<()>,
 ) -> color_eyre::Result<bool> {
+    
+    if let Some(focus_idx) = app_state.memory_focus {
+        if let Some(Message { kind: MessageKind::MemoryTree(tree), .. }) =
+            engine.messages.get_mut(focus_idx)
+        {
+            match key {
+                KeyCode::Esc => {
+                    app_state.memory_focus = None;
+                }
+                KeyCode::Up | KeyCode::Char('k') => tree.move_up(),
+                KeyCode::Down | KeyCode::Char('j') => tree.move_down(),
+                KeyCode::Enter | KeyCode::Char(' ') => tree.toggle_current(),
+                KeyCode::Char('y') => {
+                    if let Some(val) = tree.selected_value() {
+                        // stash in app_state or write to clipboard via arboard
+                        eprintln!("copied: {}", val); // replace with real clipboard
+                    }
+                }
+                _ => {}
+            }
+        }
+        return Ok(false); // consume all keys while tree is focused
+    }
+    
     match key {
         KeyCode::Enter => {
             let prompt = input_buf.trim().to_string();

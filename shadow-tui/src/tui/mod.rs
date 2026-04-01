@@ -8,6 +8,7 @@ mod chat_widget;
 mod logo;
 mod bottom_pane_widget;
 mod status_widget;
+mod json_inspector;
 
 pub use app::run;
 pub use color::hex_color;
@@ -28,3 +29,5 @@ pub use logo::logo_lines;
 pub use bottom_pane_widget::render_bottom_pane;
 pub use status_widget::render_status_line;
 pub use status_widget::render_yolo_hint;
+pub use json_inspector::MemoryTreeWidget;
+pub use json_inspector::tree_render_height;

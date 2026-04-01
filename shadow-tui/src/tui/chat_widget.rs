@@ -13,6 +13,8 @@ use crate::tui::logo_lines;
 use crate::tui::markdown_to_lines;
 use crate::tui::muted;
 use crate::tui::very_dim;
+use crate::tui::MemoryTreeWidget;
+use crate::tui::tree_render_height;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
@@ -24,14 +26,31 @@ use ratatui::widgets::Block;
 use ratatui::widgets::Borders;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Wrap;
+use ratatui::widgets::StatefulWidget;
 
-pub fn render_chat(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine) {
+const TREE_MAX_HEIGHT: u16 = 28;
+
+pub fn render_chat(
+    f: &mut Frame,
+    area: Rect,
+    tui_state: &TuiAppState,
+    shadow_engine: &mut ShadowEngine,
+) {
     if tui_state.history_mode {
         render_session_list(f, area, tui_state, shadow_engine);
         return;
     }
 
-    let mut all_lines: Vec<Line> = vec![];
+    // ── Build a flat list of segments ────────────────────────────────────────
+    // Each segment is either a block of Lines (text) or a MemoryTree (widget).
+    // We need total virtual height to compute scroll, same as before.
+
+    enum Segment {
+        Lines(Vec<Line<'static>>),
+        Tree { msg_idx: usize, height: u16 },
+    }
+
+    let mut segments: Vec<Segment> = vec![];
 
     for msg in &shadow_engine.messages {
         let mut lines = message_to_lines(msg, tui_state.tick);
@@ -42,22 +61,97 @@ pub fn render_chat(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_en
         }
     }
 
-    let height = area.height as usize;
+    // ── Compute total virtual height ─────────────────────────────────────────
 
-    let total_lines = all_lines.len();
-    let max_scroll = total_lines.saturating_sub(height);
-    
-    let scroll_row = if tui_state.auto_scroll {
+    let total_virtual: usize = segments.iter().map(|s| match s {
+        Segment::Lines(lines) => lines.len(),
+        Segment::Tree { height, .. } => *height as usize,
+    }).sum();
+
+    let viewport_height = area.height as usize;
+    let max_scroll = total_virtual.saturating_sub(viewport_height);
+
+    let scroll_top = if tui_state.auto_scroll {
         max_scroll
     } else {
         max_scroll.saturating_sub(tui_state.scroll_offset.min(max_scroll))
-    };  
-    f.render_widget(
-        Paragraph::new(all_lines)
-            .wrap(Wrap { trim: false })
-            .scroll((scroll_row as u16, 0)),
-        area,
-    );
+    };
+
+    // ── Walk segments, skip scrolled-past content, render visible ────────────
+
+    let mut virtual_y: usize = 0; // position in virtual space
+    let mut screen_y: u16 = area.top(); // position on screen
+
+    for segment in &mut segments {
+        if screen_y >= area.bottom() {
+            break;
+        }
+
+        match segment {
+            Segment::Lines(lines) => {
+                let seg_height = lines.len();
+                let seg_end = virtual_y + seg_height;
+
+                if seg_end <= scroll_top {
+                    // entirely scrolled past, skip
+                    virtual_y = seg_end;
+                    continue;
+                }
+
+                // How many lines of this segment are scrolled off the top
+                let skip = if virtual_y < scroll_top { scroll_top - virtual_y } else { 0 };
+                let visible_lines: Vec<Line> = lines.iter().skip(skip).cloned().collect();
+                let visible_count = visible_lines.len().min((area.bottom() - screen_y) as usize);
+                let visible_lines: Vec<Line> = visible_lines.into_iter().take(visible_count).collect();
+
+                let seg_rect = Rect::new(
+                    area.left(),
+                    screen_y,
+                    area.width,
+                    visible_count as u16,
+                );
+
+                f.render_widget(
+                    Paragraph::new(visible_lines).wrap(Wrap { trim: false }),
+                    seg_rect,
+                );
+
+                screen_y += visible_count as u16;
+                virtual_y = seg_end;
+            }
+
+            Segment::Tree { msg_idx, height } => {
+                let seg_height = *height as usize;
+                let seg_end = virtual_y + seg_height;
+            
+                if seg_end <= scroll_top {
+                    virtual_y = seg_end;
+                    continue;
+                }
+            
+                let remaining = (area.bottom() - screen_y) as u16;
+                let render_height = (*height).min(remaining);
+            
+                if render_height == 0 {
+                    virtual_y = seg_end;
+                    continue;
+                }
+            
+                let tree_rect = Rect::new(area.left(), screen_y, area.width, render_height);
+                let focused = tui_state.memory_focus == Some(*msg_idx);
+            
+                if let Some(Message { kind: MessageKind::MemoryTree(tree), .. }) =
+                    shadow_engine.messages.get_mut(*msg_idx)
+                {
+                    MemoryTreeWidget { focused, max_height: render_height }
+                        .render(tree_rect, f.buffer_mut(), tree);
+                }
+            
+                screen_y += render_height;
+                virtual_y = seg_end;
+            }
+        }
+    }
 }
 
 fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
@@ -87,6 +181,8 @@ fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
             lines
         }
         MessageKind::Tool(tool) => tool_to_lines(tool, &pad, tick),
+        // MemoryTree is handled upstream in render_chat, never reaches here
+        MessageKind::MemoryTree(_) => vec![],
     }
 }
 

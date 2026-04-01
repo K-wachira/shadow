@@ -24,13 +24,14 @@ pub struct TuiAppState {
     pub last_tick: Instant,
     pub stream_start: Option<Instant>,
     pub background_op_start: Option<Instant>,
+    pub memory_focus: Option<usize>,
 }
 
 impl Default for TuiAppState {
     fn default() -> Self {
         let state = Self {
             input: String::new(),
-
+            memory_focus: None,
             assistant_state: AssistantState::Idle,
 
             cursor_pos: 0,
@@ -67,6 +68,7 @@ pub const SLASH_COMMANDS: &[SlashCommand] = &[
     SlashCommand { name: "/delete", description: "delete current session" },
     SlashCommand { name: "/ingest", description: "ingest new logs from icloud" },
     SlashCommand { name: "/rename", description: "rename session title" },
+    SlashCommand { name: "/memory", description: "memory ..." },
     SlashCommand { name: "/exit", description: "exit Shadow" },
 ];
 
