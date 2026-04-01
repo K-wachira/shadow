@@ -1,4 +1,5 @@
 use crate::db::EntryLog;
+use crate::json_tree::JsonTree;
 
 #[derive(Debug, Clone)]
 pub enum MessageKind {
@@ -11,6 +12,9 @@ pub enum MessageKind {
     AssistantText { text: String },
 
     Tool(ToolCall),
+    
+    MemoryTree(JsonTree),
+
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +58,10 @@ impl Message {
             kind: MessageKind::Tool(call),
             indent: 0,
         }
+    }
+    
+    pub fn memory_tree(tree: JsonTree) -> Self {
+        Self { kind: MessageKind::MemoryTree(tree), indent: 0 }
     }
 }
 
