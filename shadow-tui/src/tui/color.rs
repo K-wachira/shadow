@@ -39,7 +39,7 @@ pub fn dim() -> Style {
 }
 
 pub fn error_style() -> Style {
-    Style::default().fg(Color::DarkGray)
+    Style::default().fg(Color::Red)
 }
 
 pub fn default() -> Style {

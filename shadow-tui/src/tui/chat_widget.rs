@@ -9,6 +9,7 @@ use crate::tui::TuiAppState;
 use crate::tui::bright_bold;
 use crate::tui::default;
 use crate::tui::dim;
+use crate::tui::error_style;
 use crate::tui::logo_lines;
 use crate::tui::markdown_to_lines;
 use crate::tui::muted;
