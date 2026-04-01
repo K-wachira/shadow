@@ -1,3 +1,5 @@
+use crate::tui::PendingConfirm;
+use crate::tui::PendingConfirmAction;
 use crate::tui::SlashCommand;
 use crate::tui::SLASH_COMMANDS;
 use crate::tui::TuiAppState;
@@ -19,6 +21,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::mpsc;
 
+#[derive(Clone, Copy)]
 enum SlashAction {
     New,
     Delete,
@@ -97,15 +100,45 @@ async fn handle_enter(
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<bool> {
     let command = selected_command(app_state).unwrap_or("");
+    let action = SlashAction::parse(command);
     reset_slash_picker(app_state, input_buf);
+    if let Some(pending) = pending_confirmation_for(action) {
+        app_state.pending_confirm = Some(pending);
+        return Ok(false);
+    }
     run_action(
-        SlashAction::parse(command),
+        action,
         app_state,
         engine,
         input_buf,
         reflect_tx,
     )
     .await
+}
+
+pub async fn handle_pending_confirm_key(
+    key: KeyCode,
+    app_state: &mut TuiAppState,
+    engine: &mut ShadowEngine,
+    input_buf: &mut String,
+    reflect_tx: mpsc::UnboundedSender<ShadowMind>,
+) -> color_eyre::Result<bool> {
+    let Some(pending) = app_state.pending_confirm.as_ref() else {
+        return Ok(false);
+    };
+
+    match key {
+        KeyCode::Enter | KeyCode::Char('y') | KeyCode::Char('Y') => {
+            let action = action_from_confirm(pending.action);
+            app_state.pending_confirm = None;
+            run_action(action, app_state, engine, input_buf, reflect_tx).await
+        }
+        KeyCode::Esc | KeyCode::Char('n') | KeyCode::Char('N') => {
+            app_state.pending_confirm = None;
+            Ok(false)
+        }
+        _ => Ok(false),
+    }
 }
 
 fn selected_command(app_state: &TuiAppState) -> Option<&'static str> {
@@ -143,6 +176,27 @@ async fn run_action(
         SlashAction::Unknown => {}
     }
     Ok(false)
+}
+
+fn pending_confirmation_for(action: SlashAction) -> Option<PendingConfirm> {
+    match action {
+        SlashAction::Delete => Some(PendingConfirm {
+            action: PendingConfirmAction::DeleteSession,
+            prompt: "Confirm /delete? Enter/y yes · Esc/n no".to_string(),
+        }),
+        SlashAction::Reflect => Some(PendingConfirm {
+            action: PendingConfirmAction::ReflectMind,
+            prompt: "Confirm /refect? Enter/y yes · Esc/n no".to_string(),
+        }),
+        _ => None,
+    }
+}
+
+fn action_from_confirm(action: PendingConfirmAction) -> SlashAction {
+    match action {
+        PendingConfirmAction::DeleteSession => SlashAction::Delete,
+        PendingConfirmAction::ReflectMind => SlashAction::Reflect,
+    }
 }
 
 fn handle_action_new(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {

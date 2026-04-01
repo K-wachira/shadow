@@ -11,6 +11,23 @@ use ratatui::widgets::Paragraph;
 
 // ─── Status line ─────────────────────────────────────────────────────────────
 pub fn render_status_line(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
+    if let Some(confirm) = &tui_state.pending_confirm {
+        let line = Line::from(vec![
+            Span::styled(
+                "⚠  ",
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                confirm.prompt.clone(),
+                Style::default().fg(Color::Yellow),
+            ),
+        ]);
+        f.render_widget(Paragraph::new(line), area);
+        return;
+    }
+
     if let Some(text) = tui_state.assistant_state.status_text() {
         let spinner = tui_state.assistant_state.spinner(tui_state.tick);
         let line = Line::from(vec![

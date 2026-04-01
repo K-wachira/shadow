@@ -25,6 +25,8 @@ pub use input_widget::render_input;
 pub use tui_models::TuiAppState;
 pub use tui_models::SLASH_COMMANDS;
 pub use tui_models::SlashCommand;
+pub use tui_models::PendingConfirm;
+pub use tui_models::PendingConfirmAction;
 pub use markdown_parse::markdown_to_lines;
 pub use shadow_render::render;
 pub use chat_widget::render_chat;

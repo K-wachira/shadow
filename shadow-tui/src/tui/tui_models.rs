@@ -3,6 +3,18 @@ use shadow_core::db::Sessions;
 use std::path::PathBuf;
 use std::time::Instant;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PendingConfirmAction {
+    DeleteSession,
+    ReflectMind,
+}
+
+#[derive(Debug, Clone)]
+pub struct PendingConfirm {
+    pub action: PendingConfirmAction,
+    pub prompt: String,
+}
+
 #[derive(Debug)]
 pub struct TuiAppState {
     pub input: String,          // what the user is typing
@@ -30,6 +42,7 @@ pub struct TuiAppState {
     pub memory_edit_buffer: String,
     pub memory_edit_path: Option<Vec<usize>>,
     pub memory_source_path: Option<PathBuf>,
+    pub pending_confirm: Option<PendingConfirm>,
 }
 
 impl Default for TuiAppState {
@@ -60,6 +73,7 @@ impl Default for TuiAppState {
             memory_edit_buffer: String::new(),
             memory_edit_path: None,
             memory_source_path: None,
+            pending_confirm: None,
         };
         state
     }

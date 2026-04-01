@@ -16,6 +16,7 @@ use tokio::sync::mpsc;
 use self::channels::process_channels;
 use self::handlers::handle_key_history;
 use self::handlers::handle_key_normal;
+use self::handlers::handle_pending_confirm_key;
 use self::handlers::handle_key_slash;
 use self::handlers::handle_mouse;
 use self::state::sync_input_state;
@@ -61,7 +62,16 @@ pub async fn run(
 
         let quit = match event::read()? {
             Event::Key(key) => {
-                if app_state.slash_mode {
+                if app_state.pending_confirm.is_some() {
+                    handle_pending_confirm_key(
+                        key.code,
+                        &mut app_state,
+                        shadow_engine,
+                        &mut input_buf,
+                        reflect_tx.clone(),
+                    )
+                    .await?
+                } else if app_state.slash_mode {
                     handle_key_slash(
                         key.code,
                         &mut app_state,
