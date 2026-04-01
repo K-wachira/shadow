@@ -364,10 +364,10 @@ fn handle_key_history(
                 }
             }
         }
-        KeyCode::Up => {
+        KeyCode::Up | KeyCode::Char('k') => {
             app_state.history_cursor = app_state.history_cursor.saturating_sub(1);
         }
-        KeyCode::Down => {
+        KeyCode::Down | KeyCode::Char('j') => {
             let max = app_state.history_sessions.len().saturating_sub(1);
             app_state.history_cursor = (app_state.history_cursor + 1).min(max);
         }
