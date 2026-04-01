@@ -1,0 +1,237 @@
+use crate::tui::SlashCommand;
+use crate::tui::SLASH_COMMANDS;
+use crate::tui::TuiAppState;
+use crossterm::event::KeyCode;
+use json5::from_str;
+use shadow_core::engine::ShadowEngine;
+use shadow_core::json_tree::JsonTree;
+use shadow_core::mind::gather_reflect_input;
+use shadow_core::mind::mind_path;
+use shadow_core::mind::reflect_with_input;
+use shadow_core::mind::ShadowMind;
+use shadow_core::model::AssistantState;
+use shadow_core::model::Message;
+use shadow_core::model::ToolCall;
+use shadow_core::model::ToolPayload;
+use shadow_core::utils::format_timestamp;
+use std::fs::read_to_string;
+use std::sync::Arc;
+use std::time::Instant;
+use tokio::sync::mpsc;
+
+enum SlashAction {
+    New,
+    Delete,
+    History,
+    Ingest,
+    Reflect,
+    Rename,
+    Exit,
+    Memory,
+    Unknown,
+}
+
+impl SlashAction {
+    fn parse(input: &str) -> Self {
+        match input.trim() {
+            "/delete" => Self::Delete,
+            "/new" => Self::New,
+            "/ingest" => Self::Ingest,
+            "/refect" => Self::Reflect,
+            "/rename" => Self::Rename,
+            "/exit" => Self::Exit,
+            "/history" => Self::History,
+            "/memory" => Self::Memory,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+pub async fn handle_key_slash(
+    key: KeyCode,
+    app_state: &mut TuiAppState,
+    engine: &mut ShadowEngine,
+    input_buf: &mut String,
+    reflect_tx: mpsc::UnboundedSender<ShadowMind>,
+) -> color_eyre::Result<bool> {
+    match key {
+        KeyCode::Esc => handle_escape(app_state, input_buf),
+        KeyCode::Enter => return handle_enter(app_state, engine, input_buf, reflect_tx).await,
+        KeyCode::Backspace => handle_backspace(app_state, input_buf),
+        KeyCode::Up => {
+            app_state.slash_cursor = app_state.slash_cursor.saturating_sub(1);
+        }
+        KeyCode::Down => {
+            let max = SLASH_COMMANDS.len().saturating_sub(1);
+            app_state.slash_cursor = (app_state.slash_cursor + 1).min(max);
+        }
+        KeyCode::Char(c) => {
+            input_buf.push(c);
+            app_state.slash_input = input_buf.clone();
+        }
+        _ => {}
+    }
+    Ok(false)
+}
+
+fn handle_escape(app_state: &mut TuiAppState, input_buf: &mut String) {
+    app_state.slash_mode = false;
+    app_state.slash_input = String::new();
+    input_buf.clear();
+}
+
+fn handle_backspace(app_state: &mut TuiAppState, input_buf: &mut String) {
+    input_buf.pop();
+    if input_buf.is_empty() {
+        app_state.slash_mode = false;
+        app_state.slash_input = String::new();
+    } else {
+        app_state.slash_input = input_buf.clone();
+    }
+}
+
+async fn handle_enter(
+    app_state: &mut TuiAppState,
+    engine: &mut ShadowEngine,
+    input_buf: &mut String,
+    reflect_tx: mpsc::UnboundedSender<ShadowMind>,
+) -> color_eyre::Result<bool> {
+    let command = selected_command(app_state).unwrap_or("");
+    reset_slash_picker(app_state, input_buf);
+    run_action(
+        SlashAction::parse(command),
+        app_state,
+        engine,
+        input_buf,
+        reflect_tx,
+    )
+    .await
+}
+
+fn selected_command(app_state: &TuiAppState) -> Option<&'static str> {
+    let input = app_state.slash_input.trim_start_matches('/').to_lowercase();
+    let matching: Vec<&SlashCommand> = SLASH_COMMANDS
+        .iter()
+        .filter(|cmd| cmd.name.trim_start_matches('/').starts_with(&input))
+        .collect();
+    matching.get(app_state.slash_cursor).map(|candidate| candidate.name)
+}
+
+fn reset_slash_picker(app_state: &mut TuiAppState, input_buf: &mut String) {
+    app_state.slash_mode = false;
+    app_state.slash_input = String::new();
+    app_state.slash_cursor = 0;
+    input_buf.clear();
+}
+
+async fn run_action(
+    action: SlashAction,
+    app_state: &mut TuiAppState,
+    engine: &mut ShadowEngine,
+    input_buf: &mut String,
+    reflect_tx: mpsc::UnboundedSender<ShadowMind>,
+) -> color_eyre::Result<bool> {
+    match action {
+        SlashAction::New => handle_action_new(app_state, engine),
+        SlashAction::Delete => handle_action_delete(engine)?,
+        SlashAction::History => handle_action_history(app_state, engine),
+        SlashAction::Ingest => handle_action_ingest(engine),
+        SlashAction::Reflect => handle_action_reflect(app_state, engine, reflect_tx).await?,
+        SlashAction::Rename => handle_action_rename(app_state, engine, input_buf),
+        SlashAction::Memory => handle_action_memory(app_state, engine),
+        SlashAction::Exit => return Ok(matches!(engine.assistant_state, AssistantState::Idle)),
+        SlashAction::Unknown => {}
+    }
+    Ok(false)
+}
+
+fn handle_action_new(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
+    if engine.messages.len() > 1 {
+        engine.start_new_session();
+        app_state.auto_scroll = true;
+        app_state.scroll_offset = 0;
+    }
+}
+
+fn handle_action_delete(engine: &mut ShadowEngine) -> color_eyre::Result<()> {
+    engine.delete_current_session()?;
+    engine.messages = engine.messages.clone();
+    Ok(())
+}
+
+fn handle_action_history(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
+    if let Ok(sessions) = engine.list_sessions(30) {
+        app_state.history_sessions = sessions;
+        app_state.history_mode = true;
+        app_state.history_cursor = 0;
+    }
+}
+
+fn handle_action_ingest(engine: &mut ShadowEngine) {
+    match engine.ingest_icloud_logs() {
+        Ok(logs) => {
+            let mut tool = ToolCall::new("Ingest", "iCloud logs");
+            tool.finish(vec![format!("{} new logs ingested", logs.len())]);
+            tool.payload = Some(ToolPayload::Logs(logs.clone()));
+            tool.finish(
+                logs.iter()
+                    .map(|log| format!("{} — {}", format_timestamp(&log.time_stamp), log.content))
+                    .collect(),
+            );
+            engine.messages.push(Message::tool(tool));
+        }
+        Err(e) => eprintln!("ingest error: {}", e),
+    }
+}
+
+async fn handle_action_reflect(
+    app_state: &mut TuiAppState,
+    engine: &mut ShadowEngine,
+    reflect_tx: mpsc::UnboundedSender<ShadowMind>,
+) -> color_eyre::Result<()> {
+    let (current_mind, logs_json) = gather_reflect_input(&engine.db)?;
+    let llm_client = Arc::clone(&engine.llm_client);
+    app_state.stream_start = Some(Instant::now());
+    tokio::spawn(async move {
+        match reflect_with_input(&llm_client, current_mind, logs_json).await {
+            Ok(new_mind) => {
+                let _ = reflect_tx.send(new_mind);
+            }
+            Err(e) => {
+                eprintln!("reflect error: {}", e);
+            }
+        }
+    });
+    Ok(())
+}
+
+fn handle_action_rename(
+    app_state: &mut TuiAppState,
+    engine: &mut ShadowEngine,
+    input_buf: &mut String,
+) {
+    app_state.rename_mode = true;
+    input_buf.clear();
+    input_buf.push_str(engine.session_name.clone().as_str());
+}
+
+fn handle_action_memory(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
+    let path = mind_path();
+    let expanded = false;
+    match read_to_string(&path) {
+        Ok(raw) => match from_str::<serde_json::Value>(&raw) {
+            Ok(value) => {
+                let tree = JsonTree::from_value(&value, expanded);
+                let msg_idx = engine.messages.len();
+                engine.messages.push(Message::memory_tree(tree));
+                app_state.memory_focus = Some(msg_idx);
+                app_state.memory_source_path = Some(path.clone());
+                app_state.memory_edit_mode = false;
+                app_state.memory_edit_buffer.clear();
+                app_state.memory_edit_path = None;
+            }
+            Err(e) => eprintln!("failed to parse shadow.mind: {}", e),
+        },
+        Err(e) => eprintln!("failed to read shadow.mind: {}", e),
+    }
+}
