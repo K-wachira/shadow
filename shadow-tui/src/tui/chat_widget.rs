@@ -52,12 +52,20 @@ pub fn render_chat(
 
     let mut segments: Vec<Segment> = vec![];
 
-    for msg in &shadow_engine.messages {
-        let mut lines = message_to_lines(msg, tui_state.tick);
-        all_lines.append(&mut lines);
-        // Blank line after each top-level message for breathing room
-        if msg.indent == 0 {
-            all_lines.push(Line::from(""));
+    for (msg_idx, msg) in shadow_engine.messages.iter().enumerate() {
+        match &msg.kind {
+            MessageKind::MemoryTree(tree) => {
+                let h = tree_render_height(tree, TREE_MAX_HEIGHT);
+                segments.push(Segment::Tree { msg_idx, height: h });
+                segments.push(Segment::Lines(vec![Line::from("")]));
+            }
+            _ => {
+                let mut lines = message_to_lines(msg, tui_state.tick);
+                if msg.indent == 0 {
+                    lines.push(Line::from(""));
+                }
+                segments.push(Segment::Lines(lines));
+            }
         }
     }
 
