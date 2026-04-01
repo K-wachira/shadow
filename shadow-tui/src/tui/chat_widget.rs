@@ -232,7 +232,7 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shado
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::DarkGray))
                 .title(Span::styled(
-                    " sessions  (↑↓ · Enter to load · Esc to cancel) ",
+                    " sessions  (↑↓ or j/k to navigate · Enter to load · Esc to cancel) ",
                     dim(),
                 )),
         ),
