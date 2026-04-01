@@ -38,6 +38,10 @@ pub fn dim() -> Style {
     Style::default().fg(Color::DarkGray)
 }
 
+pub fn error_style() -> Style {
+    Style::default().fg(Color::DarkGray)
+}
+
 pub fn default() -> Style {
     Style::default().fg(tui::hex_color("#FFFFFF"))
 }

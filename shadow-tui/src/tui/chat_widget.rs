@@ -215,7 +215,18 @@ fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
 }
 
 fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine ) {
-   let history_sessions = shadow_engine.list_sessions(30).unwrap(); //TODO Handle error case
+   let history_sessions = match shadow_engine.list_sessions(30) {
+    Ok(sessions) => sessions,
+    Err(e) => {
+        let line = Line::from(Span::styled(
+            format!("  failed to load sessions: {}", e),
+            error_style(),
+        ));
+        f.render_widget(Paragraph::new(line), area);
+        return;
+       }
+    };
+   
     if history_sessions.is_empty() {
         let line = Line::from(Span::styled("  no sessions found", dim()));
         f.render_widget(Paragraph::new(line), area);
