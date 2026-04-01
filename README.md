@@ -96,6 +96,14 @@ shadow ask "what has my energy been like this week?"
 shadow tui
 ```
 
+If your terminal/PTY has issues with inline viewport startup, set:
+
+```bash
+SHADOW_TUI_VIEWPORT=fullscreen shadow tui
+```
+
+Supported values: `auto` (default), `inline`, `fullscreen`.
+
 ## Log Format
 
 Logs are captured via iPhone Shortcut and exported as JSON. Each entry includes:
