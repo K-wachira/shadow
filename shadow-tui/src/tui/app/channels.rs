@@ -7,12 +7,9 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::TryRecvError;
 
 pub async fn process_channels(
-    rx: &mut mpsc::UnboundedReceiver<String>,
-    done_rx: &mut mpsc::UnboundedReceiver<()>,
-    title_rx: &mut mpsc::UnboundedReceiver<String>,
-    app_state: &mut TuiAppState,
-    engine: &mut ShadowEngine,
-    title_tx: mpsc::UnboundedSender<String>,
+    rx: &mut mpsc::UnboundedReceiver<String>, done_rx: &mut mpsc::UnboundedReceiver<()>,
+    title_rx: &mut mpsc::UnboundedReceiver<String>, app_state: &mut TuiAppState,
+    engine: &mut ShadowEngine, title_tx: mpsc::UnboundedSender<String>,
     reflect_rx: &mut mpsc::UnboundedReceiver<ShadowMind>,
 ) -> color_eyre::Result<()> {
     while let Ok(chunk) = rx.try_recv() {

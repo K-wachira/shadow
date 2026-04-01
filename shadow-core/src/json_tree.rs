@@ -64,7 +64,11 @@ pub struct FlatRow {
 
 #[derive(Debug, Clone)]
 pub enum RowDisplay {
-    Expandable { expanded: bool, child_count: usize, is_object: bool },
+    Expandable {
+        expanded: bool,
+        child_count: usize,
+        is_object: bool,
+    },
     Leaf(String),
 }
 
@@ -87,7 +91,12 @@ impl JsonTree {
             _ => vec![TreeNode::from_json("root".into(), value, 0, expanded)],
         };
 
-        let mut tree = JsonTree { roots, flat: vec![], cursor: 0, scroll: 0 };
+        let mut tree = JsonTree {
+            roots,
+            flat: vec![],
+            cursor: 0,
+            scroll: 0,
+        };
         tree.rebuild_flat();
         tree
     }
@@ -124,10 +133,12 @@ impl JsonTree {
 
     /// Returns a copyable string for the currently selected row
     pub fn selected_value(&self) -> Option<String> {
-        self.flat.get(self.cursor).and_then(|row| match &row.display {
-            RowDisplay::Leaf(v) => Some(format!("{}: {}", row.key, v)),
-            _ => None,
-        })
+        self.flat
+            .get(self.cursor)
+            .and_then(|row| match &row.display {
+                RowDisplay::Leaf(v) => Some(format!("{}: {}", row.key, v)),
+                _ => None,
+            })
     }
 
     pub fn selected_path(&self) -> Option<Vec<usize>> {
@@ -135,10 +146,12 @@ impl JsonTree {
     }
 
     pub fn selected_leaf_literal(&self) -> Option<String> {
-        self.flat.get(self.cursor).and_then(|row| match &row.display {
-            RowDisplay::Leaf(v) => Some(v.clone()),
-            _ => None,
-        })
+        self.flat
+            .get(self.cursor)
+            .and_then(|row| match &row.display {
+                RowDisplay::Leaf(v) => Some(v.clone()),
+                _ => None,
+            })
     }
 
     pub fn set_value_at_path(&mut self, path: &[usize], value: &Value) -> bool {
@@ -245,7 +258,12 @@ fn collect_flat(node: &TreeNode, path: &[usize], flat: &mut Vec<FlatRow>) {
         NodeValue::Leaf(s) => RowDisplay::Leaf(s.clone()),
     };
 
-    flat.push(FlatRow { depth: node.depth, key: node.key.clone(), display, path: path.to_vec() });
+    flat.push(FlatRow {
+        depth: node.depth,
+        key: node.key.clone(),
+        display,
+        path: path.to_vec(),
+    });
 
     if node.expanded {
         let children = match &node.value {

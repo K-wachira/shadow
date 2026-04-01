@@ -16,7 +16,7 @@ const MASCOT: [&str; 5] = [
     "▀▀▀▀ ▀▀ ▀▀▀ ▀ ▀▀▀▀▀ ",
     "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀ ",
 ];
-pub fn logo_lines( model_name: &String ) -> Vec<Line<'static>> {
+pub fn logo_lines(model_name: &String) -> Vec<Line<'static>> {
     let dim = Style::default().fg(DIM);
     let border = Style::default().fg(BORDER);
     let mascot_style = Style::default().fg(ACCENT);
@@ -24,7 +24,7 @@ pub fn logo_lines( model_name: &String ) -> Vec<Line<'static>> {
     // Width matches a standard 80-col terminal, leaving breathing room
     let w: usize = 50;
 
-    let top    = format!("┌{}┐", "─".repeat(w));
+    let top = format!("┌{}┐", "─".repeat(w));
     let bottom = format!("└{}┘", "─".repeat(w));
 
     let pad = |s: &str| -> String {
@@ -34,7 +34,7 @@ pub fn logo_lines( model_name: &String ) -> Vec<Line<'static>> {
         let right_pad = total_pad - left_pad;
         format!("{}{}{}", " ".repeat(left_pad), s, " ".repeat(right_pad))
     };
-    
+
     let mode_name_logo = if model_name.is_empty() {
         " · ".to_string()
     } else {
@@ -52,7 +52,6 @@ pub fn logo_lines( model_name: &String ) -> Vec<Line<'static>> {
     vec![
         Line::raw(""),
         Line::from(Span::styled(top, border)),
-
         // Mascot
         Line::from(vec![
             Span::styled("│", border),
@@ -79,12 +78,8 @@ pub fn logo_lines( model_name: &String ) -> Vec<Line<'static>> {
             Span::styled(pad(MASCOT[4]), mascot_style),
             Span::styled("│", border),
         ]),
-
-
         // Meta info
         border_row(&format!("kelvin {} v0.1.0", mode_name_logo).as_ref(), dim),
-
-        
         Line::from(Span::styled(bottom, border)),
         Line::raw(""),
     ]

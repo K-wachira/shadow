@@ -11,19 +11,18 @@ pub struct Args {
 pub enum Commands {
     /// Load new Json logs from iCloud to the DB.
     Ingest,
-    
+
     /// Ask shadow for a recommendation
     Ask { query: Option<String> },
-    
-    /// Log a new entry directly into the DB 
+
+    /// Log a new entry directly into the DB
     Log { content: Option<String> },
-    
+
     /// Show recent logs ( Should take an argument )
-    Recent  { content: Option<i32> },
-    
+    Recent { content: Option<i32> },
+
     /// Show stats and patterns
     Stats,
-
 }
 // Commands::Ingest => ingest(),
 // Commands::Ask { query } => ask(query),

@@ -11,12 +11,8 @@ use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 
 pub async fn handle_key_normal(
-    key: KeyCode,
-    app_state: &mut TuiAppState,
-    engine: &mut ShadowEngine,
-    input_buf: &mut String,
-    tx: mpsc::UnboundedSender<String>,
-    done_tx: mpsc::UnboundedSender<()>,
+    key: KeyCode, app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
+    tx: mpsc::UnboundedSender<String>, done_tx: mpsc::UnboundedSender<()>,
 ) -> color_eyre::Result<bool> {
     if let Some(focus_idx) = app_state.memory_focus {
         if let Some(Message {
@@ -32,13 +28,14 @@ pub async fn handle_key_normal(
                         app_state.memory_edit_path = None;
                     }
                     KeyCode::Enter => {
-                        let parsed = match from_str::<serde_json::Value>(&app_state.memory_edit_buffer) {
-                            Ok(value) => value,
-                            Err(e) => {
-                                eprintln!("invalid JSON value: {}", e);
-                                return Ok(false);
-                            }
-                        };
+                        let parsed =
+                            match from_str::<serde_json::Value>(&app_state.memory_edit_buffer) {
+                                Ok(value) => value,
+                                Err(e) => {
+                                    eprintln!("invalid JSON value: {}", e);
+                                    return Ok(false);
+                                }
+                            };
 
                         let Some(target_path) = app_state.memory_edit_path.clone() else {
                             eprintln!("no selected memory row to edit");

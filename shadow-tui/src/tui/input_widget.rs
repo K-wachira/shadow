@@ -1,6 +1,6 @@
-use crate::tui::dim;
-use crate::tui::bright;
 use crate::tui::TuiAppState;
+use crate::tui::bright;
+use crate::tui::dim;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
@@ -9,7 +9,6 @@ use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::Paragraph;
-
 
 pub fn render_input(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
     let prefix = if tui_state.memory_edit_mode {

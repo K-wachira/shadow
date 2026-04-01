@@ -1,19 +1,19 @@
-use std::sync::Arc;
-use crate::db::Database;
-use crate::llm::LlmClient;
-use crate::model::Message;
-use crate::model::AssistantState;
-use tokio_stream::Stream;
 use crate::ask::ask;
-use tokio_stream::StreamExt;
-use crate::db::Sessions;
-use crate::db::SessionMessages;
-use crate::model::MessageKind;
-use tokio::sync::mpsc;
-use crate::ingest::file_ingest;
+use crate::db::Database;
 use crate::db::EntryLog;
-use crate::mind::ShadowMind;
+use crate::db::SessionMessages;
+use crate::db::Sessions;
+use crate::ingest::file_ingest;
+use crate::llm::LlmClient;
 use crate::mind;
+use crate::mind::ShadowMind;
+use crate::model::AssistantState;
+use crate::model::Message;
+use crate::model::MessageKind;
+use std::sync::Arc;
+use tokio::sync::mpsc;
+use tokio_stream::Stream;
+use tokio_stream::StreamExt;
 
 pub struct ShadowEngine {
     pub db: Arc<Database>,
@@ -27,7 +27,7 @@ pub struct ShadowEngine {
 
 impl ShadowEngine {
     pub fn new(db: Arc<Database>, llm_client: Arc<LlmClient>) -> color_eyre::Result<Self> {
-        let mind = mind::load()?; 
+        let mind = mind::load()?;
         Ok(Self {
             db,
             llm_client,
@@ -38,33 +38,39 @@ impl ShadowEngine {
             mind,
         })
     }
-    
+
     fn start_session(&mut self) -> color_eyre::Result<()> {
-        let session_id = self.db.create_session(&self.session_name, &self.llm_client.model_name)?;
+        let session_id = self
+            .db
+            .create_session(&self.session_name, &self.llm_client.model_name)?;
         self.session_id = session_id;
         Ok(())
     }
-    
-    pub fn start_new_session(&mut self){
+
+    pub fn start_new_session(&mut self) {
         self.session_name = String::from("Untitled Session");
         self.session_id = 0;
         self.messages = vec![Message::logo(&self.llm_client.model_name)];
         self.assistant_state = AssistantState::Idle;
     }
-    
-    pub async fn send_message(&mut self, prompt: &str) -> color_eyre::Result<impl Stream<Item = String> + 'static> {
+
+    pub async fn send_message(
+        &mut self, prompt: &str,
+    ) -> color_eyre::Result<impl Stream<Item = String> + 'static> {
         // create session on first message
         if self.session_id == 0 {
             self.start_session()?;
         }
-       
+
         self.messages.push(Message::user(prompt));
-        self.db.insert_message(self.session_id, "user", prompt, None)?;
+        self.db
+            .insert_message(self.session_id, "user", prompt, None)?;
         self.assistant_state = AssistantState::Thinking { secs: 0 };
-    
-        let enriched = ask(&prompt.to_string(), &self.db, &self.messages).map_err(|e| color_eyre::eyre::eyre!(e))?;
+
+        let enriched = ask(&prompt.to_string(), &self.db, &self.messages)
+            .map_err(|e| color_eyre::eyre::eyre!(e))?;
         let llm_client = Arc::clone(&self.llm_client);
-    
+
         let stream = async_stream::stream! {
             if let Ok(s) = llm_client.llm_ask_stream(&enriched).await {
                 let mut s = s;
@@ -73,11 +79,13 @@ impl ShadowEngine {
                 }
             }
         };
-    
+
         Ok(stream)
     }
-    
-    pub async fn on_stream_complete(&mut self, response: &str, title_tx: mpsc::UnboundedSender<String>) -> color_eyre::Result<()> {
+
+    pub async fn on_stream_complete(
+        &mut self, response: &str, title_tx: mpsc::UnboundedSender<String>,
+    ) -> color_eyre::Result<()> {
         self.db.insert_message(
             self.session_id,
             "assistant",
@@ -89,27 +97,29 @@ impl ShadowEngine {
         if self.session_name == "Untitled Session" {
             let _ = self.spawn_title_generation(title_tx);
         }
-        
+
         Ok(())
     }
-    
+
     pub fn list_sessions(&self, limit: usize) -> color_eyre::Result<Vec<Sessions>> {
         self.db.get_recent_sessions(limit)
     }
-    
+
     pub fn load_session(&mut self, session_id: i64) -> color_eyre::Result<Vec<SessionMessages>> {
         self.db.get_session_messages(session_id)
     }
-    
+
     pub fn end_session(&self) -> color_eyre::Result<()> {
         self.db.end_session(self.session_id)
     }
-    
-    fn spawn_title_generation(&mut self, title_tx: mpsc::UnboundedSender<String>)  {
+
+    fn spawn_title_generation(&mut self, title_tx: mpsc::UnboundedSender<String>) {
         let llm_client = Arc::clone(&self.llm_client);
 
         // grab first user + assistant exchange
-        let context: String = self.messages.iter()
+        let context: String = self
+            .messages
+            .iter()
             .filter_map(|m| match &m.kind {
                 MessageKind::UserInput { text } => Some(format!("User: {}", text)),
                 MessageKind::AssistantText { text } => Some(format!("Assistant: {}", text)),
@@ -118,7 +128,7 @@ impl ShadowEngine {
             .take(2)
             .collect::<Vec<_>>()
             .join("\n");
-    
+
         tokio::spawn(async move {
             let prompt = format!(
                 "Generate a short session title (5 words max). Return only the title as plain text, nothing else.\n\n{}",
@@ -134,7 +144,7 @@ impl ShadowEngine {
             }
         });
     }
-    
+
     pub fn delete_current_session(&mut self) -> color_eyre::Result<()> {
         if self.session_id != 0 {
             self.db.delete_session(self.session_id)?;
@@ -143,10 +153,11 @@ impl ShadowEngine {
         self.session_name = "Untitled Session".to_string();
         self.assistant_state = AssistantState::Idle;
         self.messages.clear();
-        self.messages.push(Message::logo(&self.llm_client.model_name));
+        self.messages
+            .push(Message::logo(&self.llm_client.model_name));
         Ok(())
     }
-    
+
     pub fn ingest_icloud_logs(&self) -> color_eyre::Result<Vec<EntryLog>> {
         let dir = dirs::home_dir()
             .unwrap()
@@ -155,7 +166,7 @@ impl ShadowEngine {
         eprintln!("ingest complete");
         Ok(logs)
     }
-    
+
     pub fn list_logs(&self, limit: Option<i32>) -> color_eyre::Result<Vec<EntryLog>> {
         self.db.get_logs(limit)
     }
@@ -172,13 +183,13 @@ impl ShadowEngine {
 //     fn test_engine() -> ShadowEngine {
 //         let db = Arc::new(Database::new(":memory:").expect("in-memory db"));
 //         // LlmClient::init() only stores a URL — no actual connection is made here.
-//         // 
+//         //
 //         let model = "llama3.2";
 //         let ollama = LlmProvider::Ollama(
 //             Ollama::new("http://localhost".to_string(), 11434)
 //         );
 //         // let llm_conn = Arc::new(LlmClient::init(ollama, &model).map_err(|e| color_eyre::eyre::eyre!(e)).unwrap());
-        
+
 //         let model = "deepseek-r1:latest";
 //         let provider = "ollama";
 //         let llm_client = Arc::new(

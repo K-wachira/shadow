@@ -1,19 +1,19 @@
 mod tui;
 
-use shadow_core::*;
 use db::Database;
 use llm::LlmClient;
-use tracing_subscriber;
-use std::env;
-use std::sync::Arc;
-use tui::run;
-use shadow_core::engine::ShadowEngine;
 use ratatui::Terminal;
 use ratatui::TerminalOptions;
 use ratatui::Viewport;
 use ratatui::backend::CrosstermBackend;
+use shadow_core::engine::ShadowEngine;
+use shadow_core::*;
+use std::env;
 use std::io;
 use std::io::IsTerminal;
+use std::sync::Arc;
+use tracing_subscriber;
+use tui::run;
 
 #[tokio::main]
 #[hotpath::main]
@@ -105,7 +105,9 @@ fn build_terminal_fullscreen() -> io::Result<Terminal<CrosstermBackend<io::Stdou
     )
 }
 
-fn build_terminal(mode: ViewportMode) -> color_eyre::Result<Terminal<CrosstermBackend<io::Stdout>>> {
+fn build_terminal(
+    mode: ViewportMode,
+) -> color_eyre::Result<Terminal<CrosstermBackend<io::Stdout>>> {
     match mode {
         ViewportMode::Fullscreen => Ok(build_terminal_fullscreen()?),
         ViewportMode::Inline => {
@@ -135,27 +137,28 @@ fn build_terminal(mode: ViewportMode) -> color_eyre::Result<Terminal<CrosstermBa
 
 async fn cli_main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    tracing_subscriber::fmt().with_writer(std::io::stderr).init();
+    tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .init();
     let db_conn = Arc::new(Database::new("data/shadow.db")?);
-    
-    
 
     let model = "deepseek-r1:latest";
     let provider = "ollama";
-    
+
     // let model = "Qwen/Qwen3-4B";
     // let provider = "mistralrs";
-    
+
     let llm_client = Arc::new(
-        LlmClient::init(provider, model).await
-            .map_err(|e| color_eyre::eyre::eyre!(e))?
+        LlmClient::init(provider, model)
+            .await
+            .map_err(|e| color_eyre::eyre::eyre!(e))?,
     );
-    
+
     let mut shadow_engine = ShadowEngine::new(db_conn, llm_client)?;
     let mut terminal_session = TerminalSession::start()?;
     let terminal = build_terminal(ViewportMode::from_env())?;
-    
-    let result = run(terminal,  &mut shadow_engine ).await;
+
+    let result = run(terminal, &mut shadow_engine).await;
     terminal_session.cleanup();
     result?;
 

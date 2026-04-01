@@ -1,10 +1,10 @@
+pub mod ask;
 pub mod commands;
 pub mod db;
-pub mod ingest;
-pub mod model;
-pub mod llm;
-pub mod ask;
 pub mod engine;
-pub mod mind;
-pub mod utils;
+pub mod ingest;
 pub mod json_tree;
+pub mod llm;
+pub mod mind;
+pub mod model;
+pub mod utils;

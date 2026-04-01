@@ -12,9 +12,8 @@ pub enum MessageKind {
     AssistantText { text: String },
 
     Tool(ToolCall),
-    
-    MemoryTree(JsonTree),
 
+    MemoryTree(JsonTree),
 }
 
 #[derive(Debug, Clone)]
@@ -59,9 +58,12 @@ impl Message {
             indent: 0,
         }
     }
-    
+
     pub fn memory_tree(tree: JsonTree) -> Self {
-        Self { kind: MessageKind::MemoryTree(tree), indent: 0 }
+        Self {
+            kind: MessageKind::MemoryTree(tree),
+            indent: 0,
+        }
     }
 }
 
@@ -81,8 +83,8 @@ pub enum AssistantState {
     Refining {
         secs: u64,
     },
-    
-    Reflecting{
+
+    Reflecting {
         secs: u64,
     },
 }
@@ -172,7 +174,7 @@ impl ToolCall {
             state: ToolState::Running,
             completed: false,
             children: vec![],
-            payload: None
+            payload: None,
         }
     }
 
@@ -192,7 +194,7 @@ impl ToolCall {
 }
 
 #[derive(Debug, Clone)]
- pub enum ToolPayload {
+pub enum ToolPayload {
     Logs(Vec<EntryLog>),
 }
 

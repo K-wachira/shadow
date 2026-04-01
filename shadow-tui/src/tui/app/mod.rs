@@ -2,8 +2,8 @@ mod channels;
 mod handlers;
 mod state;
 
-use crate::tui::render;
 use crate::tui::TuiAppState;
+use crate::tui::render;
 use crossterm::event::Event;
 use crossterm::event::{self};
 use ratatui::DefaultTerminal;
@@ -16,16 +16,15 @@ use tokio::sync::mpsc;
 use self::channels::process_channels;
 use self::handlers::handle_key_history;
 use self::handlers::handle_key_normal;
-use self::handlers::handle_pending_confirm_key;
 use self::handlers::handle_key_slash;
 use self::handlers::handle_mouse;
+use self::handlers::handle_pending_confirm_key;
 use self::state::sync_input_state;
 use self::state::update_assistant_state;
 use self::state::update_tick;
 
 pub async fn run(
-    mut terminal: DefaultTerminal,
-    shadow_engine: &mut ShadowEngine,
+    mut terminal: DefaultTerminal, shadow_engine: &mut ShadowEngine,
 ) -> color_eyre::Result<()> {
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
     let (done_tx, mut done_rx) = mpsc::unbounded_channel::<()>();

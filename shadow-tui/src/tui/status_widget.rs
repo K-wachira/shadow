@@ -19,10 +19,7 @@ pub fn render_status_line(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
                     .fg(Color::Yellow)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(
-                confirm.prompt.clone(),
-                Style::default().fg(Color::Yellow),
-            ),
+            Span::styled(confirm.prompt.clone(), Style::default().fg(Color::Yellow)),
         ]);
         f.render_widget(Paragraph::new(line), area);
         return;

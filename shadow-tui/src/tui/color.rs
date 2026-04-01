@@ -1,7 +1,7 @@
-use ratatui::style::Color;
-use ratatui::style::Style;
-use ratatui::style::Modifier;
 use crate::tui;
+use ratatui::style::Color;
+use ratatui::style::Modifier;
+use ratatui::style::Style;
 
 pub fn hex_color(hex: &str) -> Color {
     let hex = hex.trim_start_matches('#');
@@ -26,13 +26,14 @@ pub fn muted() -> Style {
 }
 
 pub fn selected_item_style() -> Style {
-    Style::default().fg(Color::Rgb(176, 185, 249)).bg(Color::Rgb(42, 44, 55))
+    Style::default()
+        .fg(Color::Rgb(176, 185, 249))
+        .bg(Color::Rgb(42, 44, 55))
 }
 
 pub fn default_item_style() -> Style {
     Style::default().fg(Color::Rgb(153, 153, 153))
 }
-
 
 pub fn dim() -> Style {
     Style::default().fg(Color::DarkGray)

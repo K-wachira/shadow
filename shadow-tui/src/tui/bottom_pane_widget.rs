@@ -1,6 +1,6 @@
-use crate::tui::TuiAppState;
 use crate::tui::SLASH_COMMANDS;
 use crate::tui::SlashCommand;
+use crate::tui::TuiAppState;
 use crate::tui::bright;
 use crate::tui::dim;
 use crate::tui::selected_item_style;
@@ -14,8 +14,9 @@ use ratatui::text::Span;
 use ratatui::widgets::Paragraph;
 use shadow_core::engine::ShadowEngine;
 
-
-pub fn render_bottom_pane(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine ) {
+pub fn render_bottom_pane(
+    f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine,
+) {
     if tui_state.slash_mode {
         render_slash_picker(f, area, tui_state);
         return;
@@ -57,7 +58,9 @@ fn render_slash_picker(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
             let style = if selected {
                 selected_item_style()
             } else {
-                Style::default().fg(Color::Rgb(153, 153, 153)).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Rgb(153, 153, 153))
+                    .add_modifier(Modifier::BOLD)
             };
             Line::from(vec![
                 Span::raw("  "),

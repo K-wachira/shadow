@@ -1,5 +1,5 @@
-use shadow_core::model::AssistantState;
 use shadow_core::db::Sessions;
+use shadow_core::model::AssistantState;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -17,7 +17,7 @@ pub struct PendingConfirm {
 
 #[derive(Debug)]
 pub struct TuiAppState {
-    pub input: String,          // what the user is typing
+    pub input: String, // what the user is typing
     pub yolo_mode: bool,
     pub assistant_state: AssistantState,
     pub rename_mode: bool,
@@ -28,9 +28,9 @@ pub struct TuiAppState {
     /// Monotonic tick counter — increment on each terminal tick event (~100ms)
     pub tick: u64,
 
-    pub slash_mode: bool,            // typing a slash command
+    pub slash_mode: bool,    // typing a slash command
     pub slash_input: String, // what's been typed after "/"
-    pub history_mode: bool,          // navigating session list
+    pub history_mode: bool,  // navigating session list
     pub history_sessions: Vec<Sessions>,
     pub history_cursor: usize,
     pub slash_cursor: usize,
@@ -59,13 +59,13 @@ impl Default for TuiAppState {
             yolo_mode: false,
             // context_logs: vec![],
             rename_mode: false,
-            slash_mode: false,   // typing a slash command
-            history_mode: false, // navigating session list
-            slash_input: String::new(),   // what's been typed after "/"
+            slash_mode: false,          // typing a slash command
+            history_mode: false,        // navigating session list
+            slash_input: String::new(), // what's been typed after "/"
             history_sessions: vec![],
             history_cursor: 0,
             slash_cursor: 0,
-            
+
             last_tick: Instant::now(),
             stream_start: None,
             background_op_start: None,
@@ -85,14 +85,38 @@ pub struct SlashCommand {
 }
 
 pub const SLASH_COMMANDS: &[SlashCommand] = &[
-    SlashCommand { name: "/new", description: "start new session" },
-    SlashCommand { name: "/history", description: "list past sessions" },
-    SlashCommand { name: "/refect", description: "reflect .." },
-    SlashCommand { name: "/delete", description: "delete current session" },
-    SlashCommand { name: "/ingest", description: "ingest new logs from icloud" },
-    SlashCommand { name: "/rename", description: "rename session title" },
-    SlashCommand { name: "/memory", description: "memory ..." },
-    SlashCommand { name: "/exit", description: "exit Shadow" },
+    SlashCommand {
+        name: "/new",
+        description: "start new session",
+    },
+    SlashCommand {
+        name: "/history",
+        description: "list past sessions",
+    },
+    SlashCommand {
+        name: "/refect",
+        description: "reflect ..",
+    },
+    SlashCommand {
+        name: "/delete",
+        description: "delete current session",
+    },
+    SlashCommand {
+        name: "/ingest",
+        description: "ingest new logs from icloud",
+    },
+    SlashCommand {
+        name: "/rename",
+        description: "rename session title",
+    },
+    SlashCommand {
+        name: "/memory",
+        description: "memory ...",
+    },
+    SlashCommand {
+        name: "/exit",
+        description: "exit Shadow",
+    },
 ];
 
 #[cfg(test)]
@@ -127,14 +151,22 @@ mod tests {
     #[test]
     fn slash_commands_all_have_descriptions() {
         for cmd in SLASH_COMMANDS {
-            assert!(!cmd.description.is_empty(), "{} has empty description", cmd.name);
+            assert!(
+                !cmd.description.is_empty(),
+                "{} has empty description",
+                cmd.name
+            );
         }
     }
 
     #[test]
     fn slash_commands_names_start_with_slash() {
         for cmd in SLASH_COMMANDS {
-            assert!(cmd.name.starts_with('/'), "{} doesn't start with /", cmd.name);
+            assert!(
+                cmd.name.starts_with('/'),
+                "{} doesn't start with /",
+                cmd.name
+            );
         }
     }
 }

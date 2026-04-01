@@ -79,8 +79,16 @@ pub fn markdown_to_lines(markdown: &str) -> Vec<Line<'static>> {
                 } else {
                     lines.push(Line::from(vec![
                         Span::styled("── ".to_string(), Style::default().fg(Color::DarkGray)),
-                        Span::styled(lang, Style::default().fg(Color::Yellow).add_modifier(Modifier::DIM)),
-                        Span::styled(" ──────────────────".to_string(), Style::default().fg(Color::DarkGray)),
+                        Span::styled(
+                            lang,
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::DIM),
+                        ),
+                        Span::styled(
+                            " ──────────────────".to_string(),
+                            Style::default().fg(Color::DarkGray),
+                        ),
                     ]));
                 }
             }
@@ -100,19 +108,27 @@ pub fn markdown_to_lines(markdown: &str) -> Vec<Line<'static>> {
                 let (prefix, style) = match level {
                     HeadingLevel::H1 => (
                         "# ",
-                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     HeadingLevel::H2 => (
                         "## ",
-                        Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Blue)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     HeadingLevel::H3 => (
                         "### ",
-                        Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Magenta)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     _ => (
                         "#### ",
-                        Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD),
                     ),
                 };
                 current_spans.push(Span::styled(
@@ -343,7 +359,8 @@ mod tests {
     use super::*;
 
     fn all_text(lines: &[Line<'_>]) -> String {
-        lines.iter()
+        lines
+            .iter()
             .flat_map(|l| l.spans.iter())
             .map(|s| s.content.as_ref())
             .collect::<Vec<_>>()
@@ -351,13 +368,15 @@ mod tests {
     }
 
     fn has_modifier(lines: &[Line<'_>], modifier: Modifier) -> bool {
-        lines.iter()
+        lines
+            .iter()
             .flat_map(|l| l.spans.iter())
             .any(|s| s.style.add_modifier.contains(modifier))
     }
 
     fn has_fg(lines: &[Line<'_>], color: Color) -> bool {
-        lines.iter()
+        lines
+            .iter()
             .flat_map(|l| l.spans.iter())
             .any(|s| s.style.fg == Some(color))
     }
@@ -479,8 +498,14 @@ mod tests {
     fn code_block_with_language_shows_label() {
         let lines = markdown_to_lines("```python\nprint('hi')\n```");
         let text = all_text(&lines);
-        assert!(text.contains("python"), "language label should appear in output");
-        assert!(text.contains("print('hi')"), "code content should be preserved");
+        assert!(
+            text.contains("python"),
+            "language label should appear in output"
+        );
+        assert!(
+            text.contains("print('hi')"),
+            "code content should be preserved"
+        );
     }
 
     #[test]

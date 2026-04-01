@@ -1,24 +1,24 @@
+use crate::tui::default_item_style;
+use crate::tui::selected_item_style;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::style::Color;
+use ratatui::style::Modifier;
+use ratatui::style::Style;
+use ratatui::text::Line;
+use ratatui::text::Span;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::StatefulWidget;
 use ratatui::widgets::Widget;
 use ratatui::widgets::Wrap;
-use ratatui::text::Line;
-use ratatui::text::Span;
-use ratatui::style::Color;
-use ratatui::style::Modifier;
-use ratatui::style::Style;
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
 use shadow_core::json_tree::FlatRow;
 use shadow_core::json_tree::JsonTree;
 use shadow_core::json_tree::RowDisplay;
-use crate::tui::default_item_style;
-use crate::tui::selected_item_style;
 
 pub struct MemoryTreeWidget {
     pub focused: bool,
     pub editing: bool,
-    pub viewport_height: u16, // used for scroll calc, not rect sizing
+    pub viewport_height: u16,    // used for scroll calc, not rect sizing
     pub scroll_offset_rows: u16, // rows clipped from top by chat scroll
 }
 
@@ -38,7 +38,9 @@ impl StatefulWidget for MemoryTreeWidget {
 
         // ── Header ────────────────────────────────────────────────────────────
         let header_style = if self.focused {
-            Style::default().fg(Color::Rgb(215, 119, 87)).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Rgb(215, 119, 87))
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::DarkGray)
         };
@@ -68,12 +70,7 @@ impl StatefulWidget for MemoryTreeWidget {
         // ── Render visible rows with wrapping ─────────────────────────────────
         let mut screen_y = tree_top;
 
-        let visible: Vec<_> = state
-            .flat
-            .iter()
-            .enumerate()
-            .skip(state.scroll)
-            .collect();
+        let visible: Vec<_> = state.flat.iter().enumerate().skip(state.scroll).collect();
 
         for (idx, row) in visible {
             if screen_y >= area.top() + area.height {
@@ -82,25 +79,28 @@ impl StatefulWidget for MemoryTreeWidget {
 
             let is_cursor = self.focused && idx == state.cursor;
             let indent = "  ".repeat(row.depth);
-            let key_style = if is_cursor { selected_item_style() } else { default_item_style() };
+            let key_style = if is_cursor {
+                selected_item_style()
+            } else {
+                default_item_style()
+            };
 
             let (prefix, key_style, value_text): (&str, Style, String) = match &row.display {
-                RowDisplay::Expandable { expanded, child_count, is_object } => {
+                RowDisplay::Expandable {
+                    expanded,
+                    child_count,
+                    is_object,
+                } => {
                     let arrow = if *expanded { "▾ " } else { "▸ " };
                     let brackets = if *is_object {
                         format!("└ {}", child_count)
                     } else {
                         format!("⌑ {}", child_count)
                     };
-               
-                        (arrow, key_style, brackets)
-                   
+
+                    (arrow, key_style, brackets)
                 }
-                RowDisplay::Leaf(val) => (
-                    "  ",
-                    key_style,
-                    val.clone(),
-                ),
+                RowDisplay::Leaf(val) => ("  ", key_style, val.clone()),
             };
 
             //Number of children and the emoji
@@ -125,9 +125,7 @@ impl StatefulWidget for MemoryTreeWidget {
             rows_to_skip = 0;
 
             let remaining = area.top() + area.height - screen_y;
-            let row_count = row_count
-                .saturating_sub(paragraph_skip)
-                .min(remaining);
+            let row_count = row_count.saturating_sub(paragraph_skip).min(remaining);
 
             if row_count == 0 {
                 break;
@@ -150,7 +148,11 @@ impl StatefulWidget for MemoryTreeWidget {
         // ── Scroll indicator ──────────────────────────────────────────────────
         if header_visible && state.flat.len() > visible_screen_height {
             let pct = (state.scroll * 100)
-                / state.flat.len().saturating_sub(visible_screen_height).max(1);
+                / state
+                    .flat
+                    .len()
+                    .saturating_sub(visible_screen_height)
+                    .max(1);
             let hint = format!("{}%", pct.min(100));
             buf.set_string(
                 area.right().saturating_sub(hint.len() as u16 + 1),
@@ -181,7 +183,8 @@ fn adjust_scroll_wrapped(state: &mut JsonTree, viewport_rows: usize, available_w
     }
 
     while used_rows > viewport_rows && scroll < state.cursor {
-        used_rows = used_rows.saturating_sub(row_screen_lines(&state.flat[scroll], available_width));
+        used_rows =
+            used_rows.saturating_sub(row_screen_lines(&state.flat[scroll], available_width));
         scroll += 1;
     }
 
@@ -195,8 +198,14 @@ fn row_screen_lines(row: &FlatRow, available_width: usize) -> usize {
 
 fn row_content_width(row: &FlatRow) -> usize {
     match &row.display {
-        RowDisplay::Leaf(val) => row.depth * 2 + 2 + row.key.chars().count() + 2 + val.chars().count(),
-        RowDisplay::Expandable { child_count, is_object, .. } => {
+        RowDisplay::Leaf(val) => {
+            row.depth * 2 + 2 + row.key.chars().count() + 2 + val.chars().count()
+        }
+        RowDisplay::Expandable {
+            child_count,
+            is_object,
+            ..
+        } => {
             let bracket = if *is_object {
                 format!("└ {}", child_count)
             } else {

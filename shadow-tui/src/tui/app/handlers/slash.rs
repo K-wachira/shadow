@@ -1,16 +1,16 @@
 use crate::tui::PendingConfirm;
 use crate::tui::PendingConfirmAction;
-use crate::tui::SlashCommand;
 use crate::tui::SLASH_COMMANDS;
+use crate::tui::SlashCommand;
 use crate::tui::TuiAppState;
 use crossterm::event::KeyCode;
 use json5::from_str;
 use shadow_core::engine::ShadowEngine;
 use shadow_core::json_tree::JsonTree;
+use shadow_core::mind::ShadowMind;
 use shadow_core::mind::gather_reflect_input;
 use shadow_core::mind::mind_path;
 use shadow_core::mind::reflect_with_input;
-use shadow_core::mind::ShadowMind;
 use shadow_core::model::AssistantState;
 use shadow_core::model::Message;
 use shadow_core::model::ToolCall;
@@ -51,15 +51,14 @@ impl SlashAction {
 }
 
 pub async fn handle_key_slash(
-    key: KeyCode,
-    app_state: &mut TuiAppState,
-    engine: &mut ShadowEngine,
-    input_buf: &mut String,
+    key: KeyCode, app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<bool> {
     match key {
         KeyCode::Esc => handle_escape(app_state, input_buf),
-        KeyCode::Enter => return handle_enter(app_state, engine, input_buf, reflect_tx).await,
+        KeyCode::Enter => {
+            return handle_enter(app_state, engine, input_buf, reflect_tx).await;
+        }
         KeyCode::Backspace => handle_backspace(app_state, input_buf),
         KeyCode::Up => {
             app_state.slash_cursor = app_state.slash_cursor.saturating_sub(1);
@@ -94,9 +93,7 @@ fn handle_backspace(app_state: &mut TuiAppState, input_buf: &mut String) {
 }
 
 async fn handle_enter(
-    app_state: &mut TuiAppState,
-    engine: &mut ShadowEngine,
-    input_buf: &mut String,
+    app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<bool> {
     let command = selected_command(app_state).unwrap_or("");
@@ -106,21 +103,11 @@ async fn handle_enter(
         app_state.pending_confirm = Some(pending);
         return Ok(false);
     }
-    run_action(
-        action,
-        app_state,
-        engine,
-        input_buf,
-        reflect_tx,
-    )
-    .await
+    run_action(action, app_state, engine, input_buf, reflect_tx).await
 }
 
 pub async fn handle_pending_confirm_key(
-    key: KeyCode,
-    app_state: &mut TuiAppState,
-    engine: &mut ShadowEngine,
-    input_buf: &mut String,
+    key: KeyCode, app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<bool> {
     let Some(pending) = app_state.pending_confirm.as_ref() else {
@@ -147,7 +134,9 @@ fn selected_command(app_state: &TuiAppState) -> Option<&'static str> {
         .iter()
         .filter(|cmd| cmd.name.trim_start_matches('/').starts_with(&input))
         .collect();
-    matching.get(app_state.slash_cursor).map(|candidate| candidate.name)
+    matching
+        .get(app_state.slash_cursor)
+        .map(|candidate| candidate.name)
 }
 
 fn reset_slash_picker(app_state: &mut TuiAppState, input_buf: &mut String) {
@@ -158,11 +147,8 @@ fn reset_slash_picker(app_state: &mut TuiAppState, input_buf: &mut String) {
 }
 
 async fn run_action(
-    action: SlashAction,
-    app_state: &mut TuiAppState,
-    engine: &mut ShadowEngine,
-    input_buf: &mut String,
-    reflect_tx: mpsc::UnboundedSender<ShadowMind>,
+    action: SlashAction, app_state: &mut TuiAppState, engine: &mut ShadowEngine,
+    input_buf: &mut String, reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<bool> {
     match action {
         SlashAction::New => handle_action_new(app_state, engine),
@@ -172,7 +158,9 @@ async fn run_action(
         SlashAction::Reflect => handle_action_reflect(app_state, engine, reflect_tx).await?,
         SlashAction::Rename => handle_action_rename(app_state, engine, input_buf),
         SlashAction::Memory => handle_action_memory(app_state, engine),
-        SlashAction::Exit => return Ok(matches!(engine.assistant_state, AssistantState::Idle)),
+        SlashAction::Exit => {
+            return Ok(matches!(engine.assistant_state, AssistantState::Idle));
+        }
         SlashAction::Unknown => {}
     }
     Ok(false)
@@ -239,8 +227,7 @@ fn handle_action_ingest(engine: &mut ShadowEngine) {
 }
 
 async fn handle_action_reflect(
-    app_state: &mut TuiAppState,
-    engine: &mut ShadowEngine,
+    app_state: &mut TuiAppState, engine: &mut ShadowEngine,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<()> {
     let (current_mind, logs_json) = gather_reflect_input(&engine.db)?;
@@ -260,9 +247,7 @@ async fn handle_action_reflect(
 }
 
 fn handle_action_rename(
-    app_state: &mut TuiAppState,
-    engine: &mut ShadowEngine,
-    input_buf: &mut String,
+    app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
 ) {
     app_state.rename_mode = true;
     input_buf.clear();

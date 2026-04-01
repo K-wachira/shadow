@@ -1,12 +1,12 @@
-use crate::ingest::process_json_file;
 use crate::db::{EntryLog, FileIngest, RawLog};
+use crate::ingest::process_json_file;
 
-use std::path::PathBuf;
+use crate::db::SessionMessages;
+use crate::db::Sessions;
 use chrono::prelude::*;
 use rusqlite::{Connection, Result, params};
+use std::path::PathBuf;
 use tracing::error;
-use crate::db::Sessions;
-use crate::db::SessionMessages;
 
 pub struct Database {
     conn: Connection,
@@ -23,7 +23,7 @@ impl Database {
         db.initialize_sessions()?;
         db.initialize_session_messages()?;
         Ok(db)
-    } 
+    }
 
     // Create logs table if it does not exist
     fn initialize_logs(&self) -> color_eyre::Result<()> {
@@ -58,7 +58,7 @@ impl Database {
         )?;
         Ok(())
     }
-    
+
     fn initialize_sessions(&self) -> color_eyre::Result<()> {
         self.conn.execute_batch(
             "
@@ -83,7 +83,7 @@ impl Database {
         )?;
         Ok(())
     }
-    
+
     fn initialize_session_messages(&self) -> color_eyre::Result<()> {
         self.conn.execute_batch(
             "
@@ -113,7 +113,16 @@ impl Database {
         self.conn.execute(
             "INSERT INTO shadow_logs (content, energy, mood, weather, location, time_stamp, device, log_type)
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            params![&log.content, &log.energy, &log.mood, &log.weather, &log.location, &log.time_stamp, &log.device, &log.log_type],
+            params![
+                &log.content,
+                &log.energy,
+                &log.mood,
+                &log.weather,
+                &log.location,
+                &log.time_stamp,
+                &log.device,
+                &log.log_type
+            ],
         )?;
         let id = self.conn.last_insert_rowid() as i32;
         Ok(EntryLog {
@@ -130,7 +139,7 @@ impl Database {
     }
 
     // Fetches all logs
-    pub fn get_logs(&self, limit: Option<i32>) ->  color_eyre::Result<Vec<EntryLog>> {
+    pub fn get_logs(&self, limit: Option<i32>) -> color_eyre::Result<Vec<EntryLog>> {
         let query = match limit {
             Some(n) => format!(
                 "SELECT id, content, energy, mood, weather, location, time_stamp, device, log_type FROM shadow_logs ORDER BY time_stamp DESC LIMIT {}", n ),
@@ -169,7 +178,9 @@ impl Database {
         Ok(exists)
     }
 
-    pub fn insert_file_ingest(&self, log_name: &String, dir: &PathBuf) -> color_eyre::Result<Option<EntryLog>> {
+    pub fn insert_file_ingest(
+        &self, log_name: &String, dir: &PathBuf,
+    ) -> color_eyre::Result<Option<EntryLog>> {
         if self.file_logged(&log_name)? {
             return Ok(None);
         }
@@ -199,12 +210,18 @@ impl Database {
         }
     }
 
-    pub fn get_file_ingests(&self, limit: Option<usize>,
+    pub fn get_file_ingests(
+        &self, limit: Option<usize>,
     ) -> Result<Vec<FileIngest>, rusqlite::Error> {
         let query = match limit {
-            Some(n) => format!(
-                "SELECT id, file_name, time_stamp, ingested FROM ingested_files ORDER BY time_stamp DESC LIMIT {}", n ),
-            None => "SELECT id, file_name, time_stamp, ingested FROM ingested_files ORDER BY time_stamp DESC".to_string(),
+            Some(n) => {
+                format!(
+                    "SELECT id, file_name, time_stamp, ingested FROM ingested_files ORDER BY time_stamp DESC LIMIT {}",
+                    n
+                )
+            }
+            None => "SELECT id, file_name, time_stamp, ingested FROM ingested_files ORDER BY time_stamp DESC"
+                .to_string(),
         };
         let mut stmt = self.conn.prepare(&query)?;
 
@@ -220,7 +237,7 @@ impl Database {
             .collect::<Result<Vec<_>, _>>()?;
         Ok(file_ingests)
     }
-    
+
     pub fn create_session(&self, title: &str, model: &str) -> color_eyre::Result<i64> {
         let now = chrono::Utc::now().timestamp_millis();
         self.conn.execute(
@@ -230,7 +247,7 @@ impl Database {
         )?;
         Ok(self.conn.last_insert_rowid())
     }
-    
+
     pub fn update_session_title(&self, session_id: i64, title: &str) -> color_eyre::Result<()> {
         self.conn.execute(
             "UPDATE sessions SET title = ?1 WHERE id = ?2",
@@ -238,7 +255,7 @@ impl Database {
         )?;
         Ok(())
     }
-    
+
     pub fn end_session(&self, session_id: i64) -> color_eyre::Result<()> {
         let now = chrono::Utc::now().timestamp_millis();
         self.conn.execute(
@@ -247,7 +264,7 @@ impl Database {
         )?;
         Ok(())
     }
-    
+
     pub fn get_session(&self, session_id: i64) -> color_eyre::Result<Sessions> {
         let session = self.conn.query_row(
             "SELECT id, user_id, title, status, created_at_ms, updated_at_ms, 
@@ -273,49 +290,46 @@ impl Database {
         )?;
         Ok(session)
     }
-    
+
     pub fn get_recent_sessions(&self, limit: usize) -> color_eyre::Result<Vec<Sessions>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, user_id, title, status, created_at_ms, updated_at_ms,
                     started_at_ms, ended_at_ms, provider, model, system_prompt, metadata_json
              FROM sessions ORDER BY created_at_ms DESC LIMIT ?1",
         )?;
-        let sessions = stmt.query_map(rusqlite::params![limit as i64], |row| {
-            Ok(Sessions {
-                id: row.get(0)?,
-                user_id: row.get(1)?,
-                title: row.get(2)?,
-                status: row.get(3)?,
-                created_at_ms: row.get(4)?,
-                updated_at_ms: row.get(5)?,
-                started_at_ms: row.get(6)?,
-                ended_at_ms: row.get(7)?,
-                provider: row.get(8)?,
-                model: row.get(9)?,
-                system_prompt: row.get(10)?,
-                metadata_json: row.get(11)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let sessions = stmt
+            .query_map(rusqlite::params![limit as i64], |row| {
+                Ok(Sessions {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    title: row.get(2)?,
+                    status: row.get(3)?,
+                    created_at_ms: row.get(4)?,
+                    updated_at_ms: row.get(5)?,
+                    started_at_ms: row.get(6)?,
+                    ended_at_ms: row.get(7)?,
+                    provider: row.get(8)?,
+                    model: row.get(9)?,
+                    system_prompt: row.get(10)?,
+                    metadata_json: row.get(11)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(sessions)
     }
-    
+
     pub fn insert_message(
-        &self,
-        session_id: i64,
-        role: &str,
-        content: &str,
-        model: Option<&str>,
+        &self, session_id: i64, role: &str, content: &str, model: Option<&str>,
     ) -> color_eyre::Result<i64> {
         let now = chrono::Utc::now().timestamp_millis();
-    
+
         // get next seq number for this session
         let seq: i32 = self.conn.query_row(
             "SELECT COALESCE(MAX(seq), 0) + 1 FROM session_messages WHERE session_id = ?1",
             rusqlite::params![session_id],
             |row| row.get(0),
         )?;
-    
+
         self.conn.execute(
             "INSERT INTO session_messages (session_id, seq, created_at_ms, role, content, model, metadata_json)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, '{}')",
@@ -323,33 +337,42 @@ impl Database {
         )?;
         Ok(self.conn.last_insert_rowid())
     }
-    
-    pub fn get_session_messages(&self, session_id: i64) -> color_eyre::Result<Vec<SessionMessages>> {
+
+    pub fn get_session_messages(
+        &self, session_id: i64,
+    ) -> color_eyre::Result<Vec<SessionMessages>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, session_id, seq, created_at_ms, role, content, status, model, system_prompt, metadata_json
              FROM session_messages WHERE session_id = ?1 ORDER BY seq ASC",
         )?;
-        let messages = stmt.query_map(rusqlite::params![session_id], |row| {
-            Ok(SessionMessages {
-                id: row.get(0)?,
-                session_id: row.get(1)?,
-                seq: row.get(2)?,
-                created_at_ms: row.get(3)?,
-                role: row.get(4)?,
-                content: row.get(5)?,
-                status: row.get(6)?,
-                model: row.get(7)?,
-                system_prompt: row.get(8)?,
-                metadata_json: row.get(9)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let messages = stmt
+            .query_map(rusqlite::params![session_id], |row| {
+                Ok(SessionMessages {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    seq: row.get(2)?,
+                    created_at_ms: row.get(3)?,
+                    role: row.get(4)?,
+                    content: row.get(5)?,
+                    status: row.get(6)?,
+                    model: row.get(7)?,
+                    system_prompt: row.get(8)?,
+                    metadata_json: row.get(9)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(messages)
     }
-  
+
     pub fn delete_session(&self, session_id: i64) -> color_eyre::Result<()> {
-        self.conn.execute("DELETE FROM session_messages WHERE session_id = ?1", rusqlite::params![session_id])?;
-        self.conn.execute("DELETE FROM sessions WHERE id = ?1", rusqlite::params![session_id])?;
+        self.conn.execute(
+            "DELETE FROM session_messages WHERE session_id = ?1",
+            rusqlite::params![session_id],
+        )?;
+        self.conn.execute(
+            "DELETE FROM sessions WHERE id = ?1",
+            rusqlite::params![session_id],
+        )?;
         Ok(())
     }
 }
@@ -494,7 +517,8 @@ mod tests {
     fn get_recent_sessions_respects_limit() {
         let db = test_db();
         for i in 0..5 {
-            db.create_session(&format!("Session {}", i), "model").unwrap();
+            db.create_session(&format!("Session {}", i), "model")
+                .unwrap();
         }
         assert_eq!(db.get_recent_sessions(3).unwrap().len(), 3);
     }
@@ -524,7 +548,8 @@ mod tests {
         let db = test_db();
         let sid = db.create_session("Test", "model").unwrap();
         db.insert_message(sid, "user", "Hello", None).unwrap();
-        db.insert_message(sid, "assistant", "Hi there", Some("llama3")).unwrap();
+        db.insert_message(sid, "assistant", "Hi there", Some("llama3"))
+            .unwrap();
         let msgs = db.get_session_messages(sid).unwrap();
         assert_eq!(msgs.len(), 2);
         assert_eq!(msgs[0].role, "user");
@@ -541,7 +566,12 @@ mod tests {
         for _ in 0..4 {
             db.insert_message(sid, "user", "msg", None).unwrap();
         }
-        let seqs: Vec<i32> = db.get_session_messages(sid).unwrap().iter().map(|m| m.seq).collect();
+        let seqs: Vec<i32> = db
+            .get_session_messages(sid)
+            .unwrap()
+            .iter()
+            .map(|m| m.seq)
+            .collect();
         assert_eq!(seqs, vec![1, 2, 3, 4]);
     }
 

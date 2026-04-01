@@ -4,9 +4,7 @@ use shadow_core::engine::ShadowEngine;
 use shadow_core::model::Message;
 
 pub fn handle_key_history(
-    key: KeyCode,
-    app_state: &mut TuiAppState,
-    engine: &mut ShadowEngine,
+    key: KeyCode, app_state: &mut TuiAppState, engine: &mut ShadowEngine,
 ) -> color_eyre::Result<bool> {
     match key {
         KeyCode::Esc => {
@@ -21,7 +19,9 @@ pub fn handle_key_history(
             match engine.load_session(selected_id) {
                 Ok(messages) => {
                     engine.messages.clear();
-                    engine.messages.push(Message::logo(&engine.llm_client.model_name));
+                    engine
+                        .messages
+                        .push(Message::logo(&engine.llm_client.model_name));
                     for message in messages {
                         match message.role.as_str() {
                             "user" => engine.messages.push(Message::user(message.content)),

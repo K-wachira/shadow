@@ -2,10 +2,10 @@ use futures::Stream;
 use mistralrs::ChatCompletionChunkResponse;
 use mistralrs::ChunkChoice;
 use mistralrs::Delta;
+use mistralrs::GgufModelBuilder;
 use mistralrs::Response;
 use mistralrs::TextMessageRole;
 use mistralrs::TextMessages;
-use mistralrs::{GgufModelBuilder};
 use ollama_rs::Ollama;
 use ollama_rs::generation::completion::request::GenerationRequest;
 use std::pin::Pin;
@@ -14,12 +14,10 @@ use tokio_stream::StreamExt;
 
 pub type LlmStream = Pin<Box<dyn Stream<Item = String> + Send>>;
 
-
 pub enum LlmProvider {
     Ollama(Ollama),
     MistralRs(Arc<mistralrs::Model>),
 }
-
 
 pub struct LlmClient {
     pub provider: LlmProvider,
@@ -58,7 +56,10 @@ impl LlmClient {
 
     pub async fn llm_ask(&self, prompt: &str) -> color_eyre::Result<String> {
         match &self.provider {
-            LlmProvider::Ollama(model) => self.ollama_ask(model, self.model_name.clone(), prompt).await,
+            LlmProvider::Ollama(model) => {
+                self.ollama_ask(model, self.model_name.clone(), prompt)
+                    .await
+            }
             LlmProvider::MistralRs(model) => self.mistralrs_ask(Arc::clone(model), prompt).await,
         }
     }
@@ -76,9 +77,7 @@ impl LlmClient {
     }
 
     pub async fn mistralrs_ask(
-        &self,
-        model: Arc<mistralrs::Model>,
-        prompt: &str,
+        &self, model: Arc<mistralrs::Model>, prompt: &str,
     ) -> color_eyre::Result<String> {
         let messages = TextMessages::new().add_message(TextMessageRole::User, prompt);
         let res = model
@@ -96,14 +95,12 @@ impl LlmClient {
     }
 
     pub async fn mistralrs_ask_stream(
-        &self,
-        model: Arc<mistralrs::Model>,
-        prompt: &str,
+        &self, model: Arc<mistralrs::Model>, prompt: &str,
     ) -> color_eyre::Result<LlmStream> {
         let messages = TextMessages::new()
-            .add_message(TextMessageRole::User, prompt) 
+            .add_message(TextMessageRole::User, prompt)
             .enable_thinking(true);
-        
+
         let mapped = async_stream::stream! {
             let model = model; // move Arc into stream block
             if let Ok(mut stream) = model.stream_chat_request(messages).await {
@@ -122,10 +119,7 @@ impl LlmClient {
     }
 
     pub async fn ollama_ask(
-        &self,
-        ollama: &Ollama,
-        model: String,
-        prompt: &str,
+        &self, ollama: &Ollama, model: String, prompt: &str,
     ) -> color_eyre::Result<String> {
         let res = ollama
             .generate(GenerationRequest::new(model, prompt))
@@ -135,10 +129,7 @@ impl LlmClient {
     }
 
     pub async fn ollama_ask_stream(
-        &self,
-        ollama: &Ollama,
-        model: String,
-        prompt: &str,
+        &self, ollama: &Ollama, model: String, prompt: &str,
     ) -> color_eyre::Result<LlmStream> {
         let stream = ollama
             .generate_stream(GenerationRequest::new(model, prompt.to_string()))

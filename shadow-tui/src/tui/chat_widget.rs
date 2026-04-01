@@ -1,10 +1,4 @@
-use shadow_core::model::Message;
-use shadow_core::model::MessageKind;
-use shadow_core::model::ToolCall;
-use shadow_core::model::ToolState;
-use shadow_core::engine::ShadowEngine;
-use shadow_core::utils::format_timestamp;
-use shadow_core::utils::truncate;
+use crate::tui::MemoryTreeWidget;
 use crate::tui::TuiAppState;
 use crate::tui::bright_bold;
 use crate::tui::default;
@@ -13,9 +7,8 @@ use crate::tui::error_style;
 use crate::tui::logo_lines;
 use crate::tui::markdown_to_lines;
 use crate::tui::muted;
-use crate::tui::very_dim;
-use crate::tui::MemoryTreeWidget;
 use crate::tui::tree_render_height;
+use crate::tui::very_dim;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
@@ -26,16 +19,20 @@ use ratatui::text::Span;
 use ratatui::widgets::Block;
 use ratatui::widgets::Borders;
 use ratatui::widgets::Paragraph;
-use ratatui::widgets::Wrap;
 use ratatui::widgets::StatefulWidget;
+use ratatui::widgets::Wrap;
+use shadow_core::engine::ShadowEngine;
+use shadow_core::model::Message;
+use shadow_core::model::MessageKind;
+use shadow_core::model::ToolCall;
+use shadow_core::model::ToolState;
+use shadow_core::utils::format_timestamp;
+use shadow_core::utils::truncate;
 
 const TREE_MAX_HEIGHT: u16 = 28;
 
 pub fn render_chat(
-    f: &mut Frame,
-    area: Rect,
-    tui_state: &TuiAppState,
-    shadow_engine: &mut ShadowEngine,
+    f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine,
 ) {
     if tui_state.history_mode {
         render_session_list(f, area, tui_state, shadow_engine);
@@ -72,10 +69,13 @@ pub fn render_chat(
 
     // ── Compute total virtual height ─────────────────────────────────────────
 
-    let total_virtual: usize = segments.iter().map(|s| match s {
-        Segment::Lines(lines) => lines.len(),
-        Segment::Tree { height, .. } => *height as usize,
-    }).sum();
+    let total_virtual: usize = segments
+        .iter()
+        .map(|s| match s {
+            Segment::Lines(lines) => lines.len(),
+            Segment::Tree { height, .. } => *height as usize,
+        })
+        .sum();
 
     let viewport_height = area.height as usize;
     let max_scroll = total_virtual.saturating_sub(viewport_height);
@@ -108,17 +108,17 @@ pub fn render_chat(
                 }
 
                 // How many lines of this segment are scrolled off the top
-                let skip = if virtual_y < scroll_top { scroll_top - virtual_y } else { 0 };
+                let skip = if virtual_y < scroll_top {
+                    scroll_top - virtual_y
+                } else {
+                    0
+                };
                 let visible_lines: Vec<Line> = lines.iter().skip(skip).cloned().collect();
                 let visible_count = visible_lines.len().min((area.bottom() - screen_y) as usize);
-                let visible_lines: Vec<Line> = visible_lines.into_iter().take(visible_count).collect();
+                let visible_lines: Vec<Line> =
+                    visible_lines.into_iter().take(visible_count).collect();
 
-                let seg_rect = Rect::new(
-                    area.left(),
-                    screen_y,
-                    area.width,
-                    visible_count as u16,
-                );
+                let seg_rect = Rect::new(area.left(), screen_y, area.width, visible_count as u16);
 
                 f.render_widget(
                     Paragraph::new(visible_lines).wrap(Wrap { trim: false }),
@@ -128,16 +128,16 @@ pub fn render_chat(
                 screen_y += visible_count as u16;
                 virtual_y = seg_end;
             }
-            
+
             Segment::Tree { msg_idx, height } => {
                 let seg_height = *height as usize;
                 let seg_end = virtual_y + seg_height;
-            
+
                 if seg_end <= scroll_top {
                     virtual_y = seg_end;
                     continue;
                 }
-            
+
                 if screen_y >= area.bottom() {
                     virtual_y = seg_end;
                     continue;
@@ -150,23 +150,24 @@ pub fn render_chat(
                 };
 
                 let remaining_screen = (area.bottom() - screen_y) as usize;
-                let visible_count = seg_height
-                    .saturating_sub(skip)
-                    .min(remaining_screen);
+                let visible_count = seg_height.saturating_sub(skip).min(remaining_screen);
 
                 if visible_count == 0 {
                     virtual_y = seg_end;
                     continue;
                 }
-            
+
                 let tree_rect = Rect::new(area.left(), screen_y, area.width, visible_count as u16);
                 let focused = tui_state.memory_focus == Some(*msg_idx);
-            
-                if let Some(Message { kind: MessageKind::MemoryTree(tree), .. }) =
-                    shadow_engine.messages.get_mut(*msg_idx)
+
+                if let Some(Message {
+                    kind: MessageKind::MemoryTree(tree),
+                    ..
+                }) = shadow_engine.messages.get_mut(*msg_idx)
                 {
                     if focused {
-                        f.buffer_mut().set_style(tree_rect, Style::default().bg(Color::Rgb(52, 55, 68)));
+                        f.buffer_mut()
+                            .set_style(tree_rect, Style::default().bg(Color::Rgb(52, 55, 68)));
                     }
                     MemoryTreeWidget {
                         focused,
@@ -174,9 +175,9 @@ pub fn render_chat(
                         viewport_height: visible_count as u16,
                         scroll_offset_rows: skip as u16,
                     }
-                        .render(tree_rect, f.buffer_mut(), tree);
+                    .render(tree_rect, f.buffer_mut(), tree);
                 }
-            
+
                 screen_y += visible_count as u16;
                 virtual_y = seg_end;
             }
@@ -206,7 +207,7 @@ fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
             if let Some(first) = lines.first_mut() {
                 first
                     .spans
-                    .insert(0, Span::styled(format!("{}❯  ", pad), default() ));
+                    .insert(0, Span::styled(format!("{}❯  ", pad), default()));
             }
             lines
         }
@@ -216,24 +217,25 @@ fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
     }
 }
 
-fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine ) {
-   let history_sessions = match shadow_engine.list_sessions(30) {
-    Ok(sessions) => sessions,
-    Err(e) => {
-        let line = Line::from(Span::styled(
-            format!("  failed to load sessions: {}", e),
-            error_style(),
-        ));
-        f.render_widget(Paragraph::new(line), area);
-        return;
-       }
+fn render_session_list(
+    f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine,
+) {
+    let history_sessions = match shadow_engine.list_sessions(30) {
+        Ok(sessions) => sessions,
+        Err(e) => {
+            let line = Line::from(Span::styled(
+                format!("  failed to load sessions: {}", e),
+                error_style(),
+            ));
+            f.render_widget(Paragraph::new(line), area);
+            return;
+        }
     };
-   
+
     if history_sessions.is_empty() {
         let line = Line::from(Span::styled("  no sessions found", dim()));
         f.render_widget(Paragraph::new(line), area);
         return;
-
     }
 
     let items: Vec<Line> = history_sessions
@@ -250,7 +252,11 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shado
                 Line::from(vec![
                     Span::raw("  "),
                     Span::styled(
-                        format!("{:<42} {}", title, format_timestamp(&session.created_at_ms.to_string())),
+                        format!(
+                            "{:<42} {}",
+                            title,
+                            format_timestamp(&session.created_at_ms.to_string())
+                        ),
                         Style::default()
                             .fg(Color::Black)
                             .bg(Color::Cyan)
@@ -260,7 +266,14 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shado
             } else {
                 Line::from(vec![
                     Span::raw("  "),
-                    Span::styled(format!("{:<42} {}", title, format_timestamp(&session.created_at_ms.to_string())), dim()),
+                    Span::styled(
+                        format!(
+                            "{:<42} {}",
+                            title,
+                            format_timestamp(&session.created_at_ms.to_string())
+                        ),
+                        dim(),
+                    ),
                 ])
             }
         })
