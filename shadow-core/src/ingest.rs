@@ -29,7 +29,9 @@ pub fn file_ingest(conn: &Database, dir: &PathBuf) -> color_eyre::Result<Vec<Ent
                 }
             }
         }
-        Err(e) => error!("Failed: {}", e),
+        Err(e) => {
+            eprintln!("Log ingestion failed: {}", e);
+        },
     }
     Ok(ingested)
 }
