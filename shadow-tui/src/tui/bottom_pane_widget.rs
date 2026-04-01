@@ -3,6 +3,7 @@ use crate::tui::SLASH_COMMANDS;
 use crate::tui::SlashCommand;
 use crate::tui::bright;
 use crate::tui::dim;
+use crate::tui::selected_item_style;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
@@ -54,15 +55,15 @@ fn render_slash_picker(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
         .map(|(i, cmd)| {
             let selected = i == tui_state.slash_cursor;
             let style = if selected {
-                Style::default().fg(Color::Black).bg(Color::Cyan)
+                selected_item_style()
             } else {
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+                Style::default().fg(Color::Rgb(153, 153, 153)).add_modifier(Modifier::BOLD)
             };
             Line::from(vec![
                 Span::raw("  "),
                 Span::styled(cmd.name, style),
                 Span::raw("  "),
-                Span::styled(cmd.description, dim()),
+                Span::styled(cmd.description, style),
             ])
         })
         .collect();

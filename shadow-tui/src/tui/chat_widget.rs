@@ -55,7 +55,7 @@ pub fn render_chat(
     for (msg_idx, msg) in shadow_engine.messages.iter().enumerate() {
         match &msg.kind {
             MessageKind::MemoryTree(tree) => {
-                let h = tree_render_height(tree, TREE_MAX_HEIGHT);
+                let h = tree_render_height(tree, area.width);
                 segments.push(Segment::Tree { msg_idx, height: h });
                 segments.push(Segment::Lines(vec![Line::from("")]));
             }
@@ -127,7 +127,7 @@ pub fn render_chat(
                 screen_y += visible_count as u16;
                 virtual_y = seg_end;
             }
-
+            
             Segment::Tree { msg_idx, height } => {
                 let seg_height = *height as usize;
                 let seg_end = virtual_y + seg_height;
@@ -137,25 +137,26 @@ pub fn render_chat(
                     continue;
                 }
             
-                let remaining = (area.bottom() - screen_y) as u16;
-                let render_height = (*height).min(remaining);
-            
-                if render_height == 0 {
+                if screen_y >= area.bottom() {
                     virtual_y = seg_end;
                     continue;
                 }
             
-                let tree_rect = Rect::new(area.left(), screen_y, area.width, render_height);
+                // No clamping — pass full height, ratatui clips at terminal edge
+                let tree_rect = Rect::new(area.left(), screen_y, area.width, *height);
                 let focused = tui_state.memory_focus == Some(*msg_idx);
             
                 if let Some(Message { kind: MessageKind::MemoryTree(tree), .. }) =
                     shadow_engine.messages.get_mut(*msg_idx)
                 {
-                    MemoryTreeWidget { focused, max_height: render_height }
+                    if focused {
+                        f.buffer_mut().set_style(tree_rect, Style::default().bg(Color::Rgb(52, 55, 68)));
+                    }
+                    MemoryTreeWidget { focused, viewport_height: *height }
                         .render(tree_rect, f.buffer_mut(), tree);
                 }
             
-                screen_y += render_height;
+                screen_y += (*height).min(area.bottom() - screen_y); // screen advances only by visible portion
                 virtual_y = seg_end;
             }
         }
@@ -232,7 +233,6 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, shado
             }
         })
         .collect();
-    
 
     f.render_widget(
         Paragraph::new(items).block(

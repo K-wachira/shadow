@@ -54,6 +54,6 @@ async fn cli_main() -> color_eyre::Result<()> {
     crossterm::terminal::disable_raw_mode()?;
     result?;
 
-
+    println!("");
     Ok(())
 }

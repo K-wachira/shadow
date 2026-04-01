@@ -131,9 +131,6 @@ impl JsonTree {
     }
 
     pub fn adjust_scroll(&mut self, viewport_height: usize) {
-        if viewport_height == 0 {
-            return;
-        }
         if self.cursor < self.scroll {
             self.scroll = self.cursor;
         } else if self.cursor >= self.scroll + viewport_height {

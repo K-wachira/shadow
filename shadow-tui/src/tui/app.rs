@@ -23,7 +23,11 @@ use shadow_core::model::ToolCall;
 use shadow_core::model::ToolPayload;
 use shadow_core::utils::format_timestamp;
 use serde_json;
-    
+use shadow_core::json_tree::JsonTree;
+use json5::from_str;
+use std::fs::read_to_string;
+use shadow_core::mind::mind_path;
+
 enum SlashAction {
     New,
     Delete,
@@ -274,13 +278,13 @@ async fn handle_key_slash(
                     // app_state.input = engine.session_name.clone();
                 }
                 SlashAction::Memory => {
-                    let path = shadow_core::mind::mind_path();
+                    let path = mind_path();
                     let expanded = false;
-                    match std::fs::read_to_string(&path) {
+                    match read_to_string(&path) {
                         Ok(raw) => {
-                            match json5::from_str::<serde_json::Value>(&raw) {
+                            match from_str::<serde_json::Value>(&raw) {
                                 Ok(value) => {
-                                    let tree = shadow_core::json_tree::JsonTree::from_value(&value, expanded);
+                                    let tree = JsonTree::from_value(&value, expanded);
                                     let msg_idx = engine.messages.len();
                                     engine.messages.push(Message::memory_tree(tree));
                                     app_state.memory_focus = Some(msg_idx);

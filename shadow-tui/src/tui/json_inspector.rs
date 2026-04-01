@@ -11,29 +11,32 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use shadow_core::json_tree::JsonTree;
 use shadow_core::json_tree::RowDisplay;
+use crate::tui::default_item_style;
+use crate::tui::selected_item_style;
 
 pub struct MemoryTreeWidget {
     pub focused: bool,
-    pub max_height: u16,
+    pub viewport_height: u16, // used for scroll calc, not rect sizing
+
 }
 
 impl StatefulWidget for MemoryTreeWidget {
     type State = JsonTree;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        let viewport_height = self.max_height.min(area.height) as usize;
-        state.adjust_scroll(viewport_height);
+        let visible_screen_height = area.height.saturating_sub(1) as usize; // minus header
+        state.adjust_scroll(visible_screen_height);
 
         // ── Header ────────────────────────────────────────────────────────────
         let header_style = if self.focused {
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            Style::default().fg(Color::Rgb(215, 119, 87)).add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::DarkGray)
         };
         let focus_hint = if self.focused {
             " (j/k navigate · Enter toggle · y copy · Esc exit)"
         } else {
-            " (Enter to focus)"
+            " (/memory to view memory)"
         };
         let header = Line::from(vec![
             Span::styled("shadow.mind", header_style),
@@ -61,28 +64,28 @@ impl StatefulWidget for MemoryTreeWidget {
 
             let is_cursor = self.focused && idx == state.cursor;
             let indent = "  ".repeat(row.depth);
+            let key_style = if is_cursor { selected_item_style() } else { default_item_style() };
 
             let (prefix, key_style, value_text): (&str, Style, String) = match &row.display {
                 RowDisplay::Expandable { expanded, child_count, is_object } => {
                     let arrow = if *expanded { "▾ " } else { "▸ " };
                     let brackets = if *is_object {
-                        format!("{{ {} }}", child_count)
+                        format!("└ {}", child_count)
                     } else {
-                        format!("[ {} ]", child_count)
+                        format!("⌑ {}", child_count)
                     };
-                    (
-                        arrow,
-                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
-                        brackets,
-                    )
+               
+                        (arrow, key_style, brackets)
+                   
                 }
                 RowDisplay::Leaf(val) => (
                     "  ",
-                    Style::default().fg(Color::Blue),
+                    key_style,
                     val.clone(),
                 ),
             };
 
+            //Number of children and the emoji
             let value_color = match &row.display {
                 RowDisplay::Leaf(val) => leaf_color(val),
                 _ => Color::DarkGray,
@@ -103,7 +106,7 @@ impl StatefulWidget for MemoryTreeWidget {
             let row_rect = Rect::new(area.left(), screen_y, area.width, row_count);
 
             if is_cursor {
-                buf.set_style(row_rect, Style::default().bg(Color::Rgb(35, 35, 55)));
+                buf.set_style(row_rect, selected_item_style());
             }
 
             Paragraph::new(line)
@@ -114,15 +117,15 @@ impl StatefulWidget for MemoryTreeWidget {
         }
 
         // ── Scroll indicator ──────────────────────────────────────────────────
-        if state.flat.len() > viewport_height {
+        if state.flat.len() > visible_screen_height {
             let pct = (state.scroll * 100)
-                / state.flat.len().saturating_sub(viewport_height).max(1);
+                / state.flat.len().saturating_sub(visible_screen_height).max(1);
             let hint = format!("{}%", pct.min(100));
             buf.set_string(
                 area.right().saturating_sub(hint.len() as u16 + 1),
                 area.top(),
                 &hint,
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(Color::Cyan),
             );
         }
     }
@@ -141,6 +144,24 @@ fn leaf_color(val: &str) -> Color {
 }
 
 /// How many screen lines this tree will occupy (header + rows, capped).
-pub fn tree_render_height(tree: &JsonTree, max_height: u16) -> u16 {
-    (tree.flat.len() as u16 * 3 + 1).min(max_height)
+pub fn tree_render_height(tree: &JsonTree, available_width: u16) -> u16 {
+    let header = 1u16;
+    let rows: u16 = tree.flat.iter().map(|row| {
+        let content_width = match &row.display {
+            RowDisplay::Leaf(val) => {
+                row.depth * 2 + 2 + row.key.chars().count() + 2 + val.chars().count()
+            }
+            RowDisplay::Expandable { child_count, is_object, .. } => {
+                let bracket = if *is_object {
+                    format!("└ {}", child_count)
+                } else {
+                    format!("⌑ {}", child_count)
+                };
+                row.depth * 2 + 2 + row.key.chars().count() + 2 + bracket.chars().count()
+            }
+        };
+        ((content_width.saturating_sub(1)) / available_width.max(1) as usize + 1) as u16
+    }).sum();
+
+    header + rows
 }

@@ -25,6 +25,15 @@ pub fn muted() -> Style {
     Style::default().fg(Color::Gray)
 }
 
+pub fn selected_item_style() -> Style {
+    Style::default().fg(Color::Rgb(176, 185, 249)).bg(Color::Rgb(42, 44, 55))
+}
+
+pub fn default_item_style() -> Style {
+    Style::default().fg(Color::Rgb(153, 153, 153))
+}
+
+
 pub fn dim() -> Style {
     Style::default().fg(Color::DarkGray)
 }

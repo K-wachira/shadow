@@ -18,6 +18,8 @@ pub use color::bright;
 pub use color::muted;
 pub use color::very_dim;
 pub use color::bright_bold;
+pub use color::selected_item_style;
+pub use color::default_item_style;
 pub use input_widget::render_input;
 pub use tui_models::TuiAppState;
 pub use tui_models::SLASH_COMMANDS;
