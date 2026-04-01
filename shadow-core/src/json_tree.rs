@@ -130,12 +130,103 @@ impl JsonTree {
         })
     }
 
+    pub fn selected_path(&self) -> Option<Vec<usize>> {
+        self.flat.get(self.cursor).map(|row| row.path.clone())
+    }
+
+    pub fn selected_leaf_literal(&self) -> Option<String> {
+        self.flat.get(self.cursor).and_then(|row| match &row.display {
+            RowDisplay::Leaf(v) => Some(v.clone()),
+            _ => None,
+        })
+    }
+
+    pub fn set_value_at_path(&mut self, path: &[usize], value: &Value) -> bool {
+        let Some(node) = get_node_mut(&mut self.roots, path) else {
+            return false;
+        };
+
+        let expanded = node.expanded;
+        node.value = node_value_from_json(value, node.depth, expanded);
+        if !node.is_expandable() {
+            node.expanded = false;
+        }
+
+        self.rebuild_flat();
+        if let Some(idx) = self.flat.iter().position(|row| row.path == path) {
+            self.cursor = idx;
+        } else {
+            self.cursor = self.cursor.min(self.flat.len().saturating_sub(1));
+        }
+        true
+    }
+
+    pub fn to_value(&self) -> Value {
+        if self.roots.len() == 1 && self.roots[0].key == "root" {
+            return tree_node_to_value(&self.roots[0]);
+        }
+
+        let mut obj = serde_json::Map::new();
+        for root in &self.roots {
+            obj.insert(root.key.clone(), tree_node_to_value(root));
+        }
+        Value::Object(obj)
+    }
+
     pub fn adjust_scroll(&mut self, viewport_height: usize) {
         if self.cursor < self.scroll {
             self.scroll = self.cursor;
         } else if self.cursor >= self.scroll + viewport_height {
             self.scroll = self.cursor - viewport_height + 1;
         }
+    }
+}
+
+fn node_value_from_json(value: &Value, depth: usize, expanded: bool) -> NodeValue {
+    match value {
+        Value::Object(map) => {
+            let children = map
+                .iter()
+                .map(|(k, v)| TreeNode::from_json(k.clone(), v, depth + 1, expanded))
+                .collect();
+            NodeValue::Object(children)
+        }
+        Value::Array(arr) => {
+            let children = arr
+                .iter()
+                .enumerate()
+                .map(|(i, v)| TreeNode::from_json(format!("[{}]", i), v, depth + 1, expanded))
+                .collect();
+            NodeValue::Array(children)
+        }
+        Value::String(s) => NodeValue::Leaf(format!("\"{}\"", s)),
+        Value::Number(n) => NodeValue::Leaf(n.to_string()),
+        Value::Bool(b) => NodeValue::Leaf(b.to_string()),
+        Value::Null => NodeValue::Leaf("null".to_string()),
+    }
+}
+
+fn tree_node_to_value(node: &TreeNode) -> Value {
+    match &node.value {
+        NodeValue::Leaf(s) => leaf_string_to_value(s),
+        NodeValue::Object(children) => {
+            let mut obj = serde_json::Map::new();
+            for child in children {
+                obj.insert(child.key.clone(), tree_node_to_value(child));
+            }
+            Value::Object(obj)
+        }
+        NodeValue::Array(children) => {
+            let arr = children.iter().map(tree_node_to_value).collect();
+            Value::Array(arr)
+        }
+    }
+}
+
+fn leaf_string_to_value(raw: &str) -> Value {
+    match json5::from_str::<Value>(raw) {
+        Ok(value) => value,
+        Err(_) => Value::String(raw.trim_matches('"').to_string()),
     }
 }
 
