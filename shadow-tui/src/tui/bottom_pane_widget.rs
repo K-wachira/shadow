@@ -56,7 +56,7 @@ fn render_slash_picker(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
         .map(|(i, cmd)| {
             let selected = i == tui_state.slash_cursor;
             let style = if selected {
-                selected_item_style()
+                selected_item_style().add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
                     .fg(Color::Rgb(153, 153, 153))
