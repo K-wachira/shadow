@@ -14,6 +14,7 @@ use ratatui::backend::CrosstermBackend;
 use std::io;
 
 #[tokio::main]
+#[hotpath::main]
 async fn main() -> color_eyre::Result<()> {
     cli_main().await
 }

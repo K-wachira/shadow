@@ -17,4 +17,8 @@ pulldown-cmark = "0.13.1"
 tui-markdown = "0.3.7"
 crossterm = "0.29.0"
 tracing-subscriber = "0.3"
-color-eyre = "0.6.5"
+
+hotpath = "0.14"
+[features]
+hotpath = ["hotpath/hotpath"]
+hotpath-alloc = ["hotpath/hotpath-alloc"]
