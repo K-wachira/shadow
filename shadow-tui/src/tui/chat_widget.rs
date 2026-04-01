@@ -55,7 +55,7 @@ pub fn render_chat(
     for (msg_idx, msg) in shadow_engine.messages.iter().enumerate() {
         match &msg.kind {
             MessageKind::MemoryTree(tree) => {
-                let h = tree_render_height(tree, area.width);
+                let h = tree_render_height(tree, area.width).min(TREE_MAX_HEIGHT);
                 segments.push(Segment::Tree { msg_idx, height: h });
                 segments.push(Segment::Lines(vec![Line::from("")]));
             }
@@ -141,9 +141,24 @@ pub fn render_chat(
                     virtual_y = seg_end;
                     continue;
                 }
+
+                let skip = if virtual_y < scroll_top {
+                    scroll_top - virtual_y
+                } else {
+                    0
+                };
+
+                let remaining_screen = (area.bottom() - screen_y) as usize;
+                let visible_count = seg_height
+                    .saturating_sub(skip)
+                    .min(remaining_screen);
+
+                if visible_count == 0 {
+                    virtual_y = seg_end;
+                    continue;
+                }
             
-                // No clamping — pass full height, ratatui clips at terminal edge
-                let tree_rect = Rect::new(area.left(), screen_y, area.width, *height);
+                let tree_rect = Rect::new(area.left(), screen_y, area.width, visible_count as u16);
                 let focused = tui_state.memory_focus == Some(*msg_idx);
             
                 if let Some(Message { kind: MessageKind::MemoryTree(tree), .. }) =
@@ -152,11 +167,15 @@ pub fn render_chat(
                     if focused {
                         f.buffer_mut().set_style(tree_rect, Style::default().bg(Color::Rgb(52, 55, 68)));
                     }
-                    MemoryTreeWidget { focused, viewport_height: *height }
+                    MemoryTreeWidget {
+                        focused,
+                        viewport_height: visible_count as u16,
+                        scroll_offset_rows: skip as u16,
+                    }
                         .render(tree_rect, f.buffer_mut(), tree);
                 }
             
-                screen_y += (*height).min(area.bottom() - screen_y); // screen advances only by visible portion
+                screen_y += visible_count as u16;
                 virtual_y = seg_end;
             }
         }
