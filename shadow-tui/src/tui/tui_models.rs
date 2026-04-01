@@ -1,5 +1,6 @@
 use shadow_core::model::AssistantState;
 use shadow_core::db::Sessions;
+use std::path::PathBuf;
 use std::time::Instant;
 
 #[derive(Debug)]
@@ -25,6 +26,10 @@ pub struct TuiAppState {
     pub stream_start: Option<Instant>,
     pub background_op_start: Option<Instant>,
     pub memory_focus: Option<usize>,
+    pub memory_edit_mode: bool,
+    pub memory_edit_buffer: String,
+    pub memory_edit_path: Option<Vec<usize>>,
+    pub memory_source_path: Option<PathBuf>,
 }
 
 impl Default for TuiAppState {
@@ -51,6 +56,10 @@ impl Default for TuiAppState {
             last_tick: Instant::now(),
             stream_start: None,
             background_op_start: None,
+            memory_edit_mode: false,
+            memory_edit_buffer: String::new(),
+            memory_edit_path: None,
+            memory_source_path: None,
         };
         state
     }
@@ -115,4 +124,3 @@ mod tests {
         }
     }
 }
-

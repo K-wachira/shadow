@@ -170,6 +170,7 @@ pub fn render_chat(
                     }
                     MemoryTreeWidget {
                         focused,
+                        editing: focused && tui_state.memory_edit_mode,
                         viewport_height: visible_count as u16,
                         scroll_offset_rows: skip as u16,
                     }

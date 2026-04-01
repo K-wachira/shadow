@@ -17,6 +17,7 @@ use crate::tui::selected_item_style;
 
 pub struct MemoryTreeWidget {
     pub focused: bool,
+    pub editing: bool,
     pub viewport_height: u16, // used for scroll calc, not rect sizing
     pub scroll_offset_rows: u16, // rows clipped from top by chat scroll
 }
@@ -42,7 +43,11 @@ impl StatefulWidget for MemoryTreeWidget {
             Style::default().fg(Color::DarkGray)
         };
         let focus_hint = if self.focused {
-            " (j/k navigate · Enter toggle · y copy · Esc exit)"
+            if self.editing {
+                " (edit mode · Enter save · Esc cancel)"
+            } else {
+                " (j/k navigate · Enter toggle · e edit · y copy · Esc exit)"
+            }
         } else {
             " (/memory to view memory)"
         };

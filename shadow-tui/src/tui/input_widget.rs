@@ -12,7 +12,11 @@ use ratatui::widgets::Paragraph;
 
 
 pub fn render_input(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
-    let prefix = tui_state.assistant_state.input_prefix();
+    let prefix = if tui_state.memory_edit_mode {
+        "edit>"
+    } else {
+        tui_state.assistant_state.input_prefix()
+    };
     let cursor = Span::styled(
         "█",
         Style::default()
@@ -26,7 +30,14 @@ pub fn render_input(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
             Span::styled(format!("{} ", prefix), dim()),
             cursor,
             Span::raw(" "),
-            Span::styled("Type your message", dim()),
+            Span::styled(
+                if tui_state.memory_edit_mode {
+                    "Type JSON value"
+                } else {
+                    "Type your message"
+                },
+                dim(),
+            ),
         ])
     } else {
         let byte_idx = tui_state

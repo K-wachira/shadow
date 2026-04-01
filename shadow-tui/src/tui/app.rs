@@ -27,6 +27,7 @@ use shadow_core::json_tree::JsonTree;
 use json5::from_str;
 use std::fs::read_to_string;
 use shadow_core::mind::mind_path;
+use std::path::{Path, PathBuf};
 
 enum SlashAction {
     New,
@@ -76,8 +77,13 @@ color_eyre::Result<()> {
         update_tick(&mut app_state);
         update_assistant_state(&mut app_state);
 
-        app_state.input = input_buf.clone();
-        app_state.cursor_pos = input_buf.chars().count();
+        if app_state.memory_edit_mode {
+            app_state.input = app_state.memory_edit_buffer.clone();
+            app_state.cursor_pos = app_state.memory_edit_buffer.chars().count();
+        } else {
+            app_state.input = input_buf.clone();
+            app_state.cursor_pos = input_buf.chars().count();
+        }
 
         if let Err(e) = terminal.draw(|f| render(f, &app_state, shadow_engine)) {
             if !e.to_string().contains("cursor position") {
@@ -288,6 +294,10 @@ async fn handle_key_slash(
                                     let msg_idx = engine.messages.len();
                                     engine.messages.push(Message::memory_tree(tree));
                                     app_state.memory_focus = Some(msg_idx);
+                                    app_state.memory_source_path = Some(path.clone());
+                                    app_state.memory_edit_mode = false;
+                                    app_state.memory_edit_buffer.clear();
+                                    app_state.memory_edit_path = None;
                                 }
                                 Err(e) => eprintln!("failed to parse shadow.mind: {}", e),
                             }
@@ -393,13 +403,83 @@ async fn handle_key_normal(
         if let Some(Message { kind: MessageKind::MemoryTree(tree), .. }) =
             engine.messages.get_mut(focus_idx)
         {
+            if app_state.memory_edit_mode {
+                match key {
+                    KeyCode::Esc => {
+                        app_state.memory_edit_mode = false;
+                        app_state.memory_edit_buffer.clear();
+                        app_state.memory_edit_path = None;
+                    }
+                    KeyCode::Enter => {
+                        let parsed = match from_str::<serde_json::Value>(&app_state.memory_edit_buffer) {
+                            Ok(value) => value,
+                            Err(e) => {
+                                eprintln!("invalid JSON value: {}", e);
+                                return Ok(false);
+                            }
+                        };
+
+                        let Some(target_path) = app_state.memory_edit_path.clone() else {
+                            eprintln!("no selected memory row to edit");
+                            app_state.memory_edit_mode = false;
+                            app_state.memory_edit_buffer.clear();
+                            return Ok(false);
+                        };
+
+                        let tree_before = tree.clone();
+                        if !tree.set_value_at_path(&target_path, &parsed) {
+                            eprintln!("failed to update selected value");
+                            return Ok(false);
+                        }
+
+                        if let Some(path) = app_state.memory_source_path.clone() {
+                            let value = tree.to_value();
+                            if let Err(e) = persist_json_value(&path, &value) {
+                                *tree = tree_before;
+                                eprintln!("failed to write shadow.mind: {}", e);
+                                return Ok(false);
+                            }
+                        } else {
+                            eprintln!("missing source path for memory file");
+                        }
+
+                        app_state.memory_edit_mode = false;
+                        app_state.memory_edit_buffer.clear();
+                        app_state.memory_edit_path = None;
+                    }
+                    KeyCode::Backspace => {
+                        app_state.memory_edit_buffer.pop();
+                    }
+                    KeyCode::Char(c) => {
+                        app_state.memory_edit_buffer.push(c);
+                    }
+                    _ => {}
+                }
+                return Ok(false);
+            }
+
             match key {
                 KeyCode::Esc => {
                     app_state.memory_focus = None;
+                    app_state.memory_edit_mode = false;
+                    app_state.memory_edit_buffer.clear();
+                    app_state.memory_edit_path = None;
+                    app_state.memory_source_path = None;
                 }
                 KeyCode::Up | KeyCode::Char('k') => tree.move_up(),
                 KeyCode::Down | KeyCode::Char('j') => tree.move_down(),
                 KeyCode::Enter | KeyCode::Char(' ') => tree.toggle_current(),
+                KeyCode::Char('e') => {
+                    if let Some(path) = tree.selected_path() {
+                        if let Some(current) = tree.selected_leaf_literal() {
+                            app_state.memory_edit_mode = true;
+                            app_state.memory_edit_path = Some(path);
+                            app_state.memory_edit_buffer = current;
+                        } else {
+                            eprintln!("select a leaf value to edit");
+                        }
+                    }
+                }
                 KeyCode::Char('y') => {
                     if let Some(val) = tree.selected_value() {
                         // stash in app_state or write to clipboard via arboard
@@ -471,6 +551,27 @@ async fn handle_key_normal(
         _ => {}
     }
     Ok(false)
+}
+
+fn persist_json_value(path: &Path, value: &serde_json::Value) -> color_eyre::Result<()> {
+    let content = json5::to_string(value)
+        .or_else(|_| serde_json::to_string_pretty(value))
+        .map_err(|e| color_eyre::eyre::eyre!(e))?;
+
+    let tmp = temp_path_for(path);
+    std::fs::write(&tmp, content)?;
+    std::fs::rename(&tmp, path)?;
+    Ok(())
+}
+
+fn temp_path_for(path: &Path) -> PathBuf {
+    let mut tmp = path.to_path_buf();
+    let file_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("shadowmind.json5");
+    tmp.set_file_name(format!("{}.tmp", file_name));
+    tmp
 }
 
 fn handle_mouse(mouse: MouseEvent, app_state: &mut TuiAppState) {
