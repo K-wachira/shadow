@@ -10,6 +10,7 @@ pub fn handle_key_history(
         KeyCode::Esc => {
             app_state.history_mode = false;
             app_state.history_sessions = vec![];
+            app_state.reset_persisted_chat();
         }
         KeyCode::Enter => {
             let selected = &app_state.history_sessions[app_state.history_cursor];
@@ -36,9 +37,11 @@ pub fn handle_key_history(
                     app_state.history_cursor = 0;
                     app_state.auto_scroll = true;
                     app_state.scroll_offset = 0;
+                    app_state.reset_persisted_chat();
                 }
                 Err(_) => {
                     app_state.history_mode = false;
+                    app_state.reset_persisted_chat();
                 }
             }
         }

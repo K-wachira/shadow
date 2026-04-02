@@ -7,14 +7,13 @@ use ratatui::TerminalOptions;
 use ratatui::Viewport;
 use ratatui::backend::CrosstermBackend;
 use shadow_core::engine::ShadowEngine;
+use shadow_core::setup;
 use shadow_core::*;
 use std::env;
 use std::io;
-use std::io::IsTerminal;
 use std::sync::Arc;
 use tracing_subscriber;
 use tui::run;
-use shadow_core::setup;
 
 #[tokio::main]
 #[hotpath::main]
@@ -29,7 +28,7 @@ async fn cli_main() -> color_eyre::Result<()> {
         .init();
     let (config, paths) = setup::run_setup()?;
     let db_conn = Arc::new(Database::init(&paths.db)?);
-    
+
     let llm_client = Arc::new(
         LlmClient::init(&config.core.provider, config.core.model.clone())
             .await
@@ -37,127 +36,51 @@ async fn cli_main() -> color_eyre::Result<()> {
     );
 
     let mut shadow_engine = ShadowEngine::new(db_conn, llm_client, config, paths)?;
-    let mut terminal_session = TerminalSession::start()?;
-    let terminal = build_terminal(ViewportMode::from_env())?;
+
+    crossterm::terminal::enable_raw_mode()?;
+    let terminal_height = crossterm::terminal::size()?.1;
+    let viewport = configured_viewport(terminal_height);
+
+    let terminal = Terminal::with_options(
+        CrosstermBackend::new(io::stdout()),
+        TerminalOptions { viewport },
+    )?;
 
     let result = run(terminal, &mut shadow_engine).await;
-    terminal_session.cleanup();
+    crossterm::terminal::disable_raw_mode()?;
     result?;
 
     println!("");
     Ok(())
 }
 
-#[derive(Clone, Copy)]
-enum ViewportMode {
-    Auto,
-    Inline,
-    Fullscreen,
-}
-
-impl ViewportMode {
-    fn from_env() -> Self {
-        match env::var("SHADOW_TUI_VIEWPORT") {
-            Ok(value) => match value.trim().to_ascii_lowercase().as_str() {
-                "auto" => Self::Auto,
-                "inline" => Self::Inline,
-                "fullscreen" | "full" => Self::Fullscreen,
-                other => {
-                    eprintln!(
-                        "unknown SHADOW_TUI_VIEWPORT='{}'; expected auto|inline|fullscreen, using auto",
-                        other
-                    );
-                    Self::Auto
-                }
-            },
-            Err(_) => Self::Auto,
-        }
+fn configured_viewport(terminal_height: u16) -> Viewport {
+    match env::var("SHADOW_TUI_VIEWPORT").ok().as_deref() {
+        Some("fullscreen") => Viewport::Fullscreen,
+        _ => Viewport::Inline(default_inline_height(terminal_height)),
     }
 }
 
-struct TerminalSession {
-    raw_mode_enabled: bool,
-    mouse_capture_enabled: bool,
+fn default_inline_height(terminal_height: u16) -> u16 {
+    let reserved_rows = if terminal_height >= 20 {
+        4
+    } else if terminal_height >= 12 {
+        2
+    } else {
+        1
+    };
+
+    terminal_height.saturating_sub(reserved_rows).max(1)
 }
 
-impl TerminalSession {
-    fn start() -> color_eyre::Result<Self> {
-        crossterm::terminal::enable_raw_mode()?;
-        crossterm::execute!(io::stdout(), crossterm::event::EnableMouseCapture)?;
-        Ok(Self {
-            raw_mode_enabled: true,
-            mouse_capture_enabled: true,
-        })
-    }
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    fn cleanup(&mut self) {
-        if self.mouse_capture_enabled {
-            let _ = crossterm::execute!(io::stdout(), crossterm::event::DisableMouseCapture);
-            self.mouse_capture_enabled = false;
-        }
-        if self.raw_mode_enabled {
-            let _ = crossterm::terminal::disable_raw_mode();
-            self.raw_mode_enabled = false;
-        }
-    }
-}
-
-impl Drop for TerminalSession {
-    fn drop(&mut self) {
-        self.cleanup();
-    }
-}
-
-fn is_cursor_position_read_error(err: &io::Error) -> bool {
-    err.to_string()
-        .to_ascii_lowercase()
-        .contains("cursor position could not be read")
-}
-
-fn build_terminal_inline(height: u16) -> io::Result<Terminal<CrosstermBackend<io::Stdout>>> {
-    Terminal::with_options(
-        CrosstermBackend::new(io::stdout()),
-        TerminalOptions {
-            viewport: Viewport::Inline(height),
-        },
-    )
-}
-
-fn build_terminal_fullscreen() -> io::Result<Terminal<CrosstermBackend<io::Stdout>>> {
-    Terminal::with_options(
-        CrosstermBackend::new(io::stdout()),
-        TerminalOptions {
-            viewport: Viewport::Fullscreen,
-        },
-    )
-}
-
-fn build_terminal(
-    mode: ViewportMode,
-) -> color_eyre::Result<Terminal<CrosstermBackend<io::Stdout>>> {
-    match mode {
-        ViewportMode::Fullscreen => Ok(build_terminal_fullscreen()?),
-        ViewportMode::Inline => {
-            let height = crossterm::terminal::size()?.1;
-            Ok(build_terminal_inline(height)?)
-        }
-        ViewportMode::Auto => {
-            if !io::stdout().is_terminal() {
-                eprintln!("stdout is not a TTY; using fullscreen viewport");
-                return Ok(build_terminal_fullscreen()?);
-            }
-
-            let height = crossterm::terminal::size()?.1;
-            match build_terminal_inline(height) {
-                Ok(terminal) => Ok(terminal),
-                Err(err) if is_cursor_position_read_error(&err) => {
-                    eprintln!(
-                        "inline viewport failed to read cursor position; falling back to fullscreen viewport"
-                    );
-                    Ok(build_terminal_fullscreen()?)
-                }
-                Err(err) => Err(err.into()),
-            }
-        }
+    #[test]
+    fn default_inline_height_leaves_rows_above_viewport() {
+        assert_eq!(default_inline_height(24), 20);
+        assert_eq!(default_inline_height(16), 14);
+        assert_eq!(default_inline_height(8), 7);
     }
 }

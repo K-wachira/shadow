@@ -3,6 +3,8 @@ mod handlers;
 mod state;
 
 use crate::tui::TuiAppState;
+use crate::tui::flush_chat_transcript;
+use crate::tui::persist_chat_scrollback;
 use crate::tui::render;
 use crossterm::event::Event;
 use crossterm::event::{self};
@@ -48,6 +50,7 @@ pub async fn run(
         update_tick(&mut app_state);
         update_assistant_state(&mut app_state);
         sync_input_state(&mut app_state, &input_buf);
+        persist_chat_scrollback(&mut terminal, &mut app_state, shadow_engine)?;
 
         if let Err(e) = terminal.draw(|f| render(f, &app_state, shadow_engine)) {
             if !e.to_string().contains("cursor position") {
@@ -94,10 +97,12 @@ pub async fn run(
                 }
             }
             Event::Mouse(mouse) => {
-                handle_mouse(mouse, &mut app_state);
+                handle_mouse(mouse, &mut app_state, shadow_engine)?;
                 false
             }
             Event::Resize(..) => {
+                terminal.autoresize()?;
+                app_state.reset_persisted_chat();
                 app_state.scroll_offset = 0;
                 false
             }
@@ -109,6 +114,7 @@ pub async fn run(
         }
     }
 
+    flush_chat_transcript(&mut terminal, &mut app_state, shadow_engine)?;
     let _ = shadow_engine.end_session();
     app_state.assistant_state = AssistantState::Idle;
     Ok(())

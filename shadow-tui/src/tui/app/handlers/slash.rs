@@ -3,6 +3,7 @@ use crate::tui::PendingConfirmAction;
 use crate::tui::SLASH_COMMANDS;
 use crate::tui::SlashCommand;
 use crate::tui::TuiAppState;
+use crate::tui::ensure_memory_cursor_visible;
 use crossterm::event::KeyCode;
 use json5::from_str;
 use shadow_core::engine::ShadowEngine;
@@ -199,6 +200,7 @@ fn handle_action_new(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
         engine.start_new_session();
         app_state.auto_scroll = true;
         app_state.scroll_offset = 0;
+        app_state.reset_persisted_chat();
     }
 }
 
@@ -213,6 +215,7 @@ fn handle_action_history(app_state: &mut TuiAppState, engine: &mut ShadowEngine)
         app_state.history_sessions = sessions;
         app_state.history_mode = true;
         app_state.history_cursor = 0;
+        app_state.reset_persisted_chat();
     }
 }
 
@@ -242,7 +245,7 @@ async fn handle_action_reflect(
     let mind_path = engine.paths.clone();
     app_state.background_op_start = Some(Instant::now());
     tokio::spawn(async move {
-        match reflect_with_input(&llm_client, current_mind, logs_json, &mind_path ).await {
+        match reflect_with_input(&llm_client, current_mind, logs_json, &mind_path).await {
             Ok(new_mind) => {
                 let _ = reflect_tx.send(new_mind);
             }
@@ -277,6 +280,7 @@ fn handle_action_memory(app_state: &mut TuiAppState, engine: &mut ShadowEngine) 
                 app_state.memory_edit_mode = false;
                 app_state.memory_edit_buffer.clear();
                 app_state.memory_edit_path = None;
+                let _ = ensure_memory_cursor_visible(app_state, engine);
             }
             Err(e) => eprintln!("failed to parse shadow.mind: {}", e),
         },

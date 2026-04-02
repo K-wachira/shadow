@@ -1,4 +1,5 @@
 use crate::tui::TuiAppState;
+use crate::tui::ensure_memory_cursor_visible;
 use crossterm::event::KeyCode;
 use json5::from_str;
 use shadow_core::engine::ShadowEngine;
@@ -15,6 +16,9 @@ pub async fn handle_key_normal(
     tx: mpsc::UnboundedSender<String>, done_tx: mpsc::UnboundedSender<()>,
 ) -> color_eyre::Result<bool> {
     if let Some(focus_idx) = app_state.memory_focus {
+        let mut keep_cursor_visible = false;
+        let mut scroll_transcript_up = false;
+        let mut scroll_transcript_down = false;
         if let Some(Message {
             kind: MessageKind::MemoryTree(tree),
             ..
@@ -84,9 +88,26 @@ pub async fn handle_key_normal(
                     app_state.memory_edit_path = None;
                     app_state.memory_source_path = None;
                 }
-                KeyCode::Up | KeyCode::Char('k') => tree.move_up(),
-                KeyCode::Down | KeyCode::Char('j') => tree.move_down(),
-                KeyCode::Enter | KeyCode::Char(' ') => tree.toggle_current(),
+                KeyCode::Up | KeyCode::Char('k') => {
+                    if tree.cursor > 0 {
+                        tree.move_up();
+                        keep_cursor_visible = true;
+                    } else {
+                        scroll_transcript_up = true;
+                    }
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    if tree.cursor + 1 < tree.flat.len() {
+                        tree.move_down();
+                        keep_cursor_visible = true;
+                    } else {
+                        scroll_transcript_down = true;
+                    }
+                }
+                KeyCode::Enter | KeyCode::Char(' ') => {
+                    tree.toggle_current();
+                    keep_cursor_visible = true;
+                }
                 KeyCode::Char('e') => {
                     if let Some(path) = tree.selected_path() {
                         if let Some(current) = tree.selected_leaf_literal() {
@@ -105,6 +126,13 @@ pub async fn handle_key_normal(
                 }
                 _ => {}
             }
+        }
+        if keep_cursor_visible {
+            ensure_memory_cursor_visible(app_state, engine)?;
+        } else if scroll_transcript_up {
+            app_state.scroll_transcript_up();
+        } else if scroll_transcript_down {
+            app_state.scroll_transcript_down();
         }
         return Ok(false);
     }
@@ -156,14 +184,10 @@ pub async fn handle_key_normal(
             input_buf.push(c);
         }
         KeyCode::Up => {
-            app_state.auto_scroll = false;
-            app_state.scroll_offset = app_state.scroll_offset.saturating_add(1);
+            app_state.scroll_transcript_up();
         }
         KeyCode::Down => {
-            app_state.scroll_offset = app_state.scroll_offset.saturating_sub(1);
-            if app_state.scroll_offset == 0 {
-                app_state.auto_scroll = true;
-            }
+            app_state.scroll_transcript_down();
         }
         _ => {}
     }

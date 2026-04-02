@@ -25,6 +25,8 @@ pub struct TuiAppState {
     /// Lines scrolled up from the bottom (0 = latest content visible)
     pub scroll_offset: usize,
     pub auto_scroll: bool,
+    pub persisted_chat_rows: usize,
+    pub persisted_chat_width: u16,
     /// Monotonic tick counter — increment on each terminal tick event (~100ms)
     pub tick: u64,
 
@@ -55,6 +57,8 @@ impl Default for TuiAppState {
             cursor_pos: 0,
             scroll_offset: 0,
             auto_scroll: true,
+            persisted_chat_rows: 0,
+            persisted_chat_width: 0,
             tick: 0,
             yolo_mode: false,
             // context_logs: vec![],
@@ -76,6 +80,25 @@ impl Default for TuiAppState {
             pending_confirm: None,
         };
         state
+    }
+}
+
+impl TuiAppState {
+    pub fn reset_persisted_chat(&mut self) {
+        self.persisted_chat_rows = 0;
+        self.persisted_chat_width = 0;
+    }
+
+    pub fn scroll_transcript_up(&mut self) {
+        self.auto_scroll = false;
+        self.scroll_offset = self.scroll_offset.saturating_add(1);
+    }
+
+    pub fn scroll_transcript_down(&mut self) {
+        self.scroll_offset = self.scroll_offset.saturating_sub(1);
+        if self.scroll_offset == 0 {
+            self.auto_scroll = true;
+        }
     }
 }
 
@@ -129,6 +152,8 @@ mod tests {
         assert!(state.input.is_empty());
         assert_eq!(state.scroll_offset, 0);
         assert!(state.auto_scroll);
+        assert_eq!(state.persisted_chat_rows, 0);
+        assert_eq!(state.persisted_chat_width, 0);
         assert_eq!(state.tick, 0);
         assert!(!state.slash_mode);
         assert!(!state.history_mode);

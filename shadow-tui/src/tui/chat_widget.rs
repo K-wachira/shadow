@@ -1,4 +1,4 @@
-use crate::tui::MemoryTreeWidget;
+use crate::tui::SLASH_COMMANDS;
 use crate::tui::TuiAppState;
 use crate::tui::bright_bold;
 use crate::tui::default;
@@ -7,9 +7,16 @@ use crate::tui::error_style;
 use crate::tui::logo_lines;
 use crate::tui::markdown_to_lines;
 use crate::tui::muted;
+use crate::tui::tree_cursor_screen_row;
 use crate::tui::tree_render_height;
+use crate::tui::tree_to_lines;
 use crate::tui::very_dim;
+use ratatui::DefaultTerminal;
 use ratatui::Frame;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Constraint;
+use ratatui::layout::Direction;
+use ratatui::layout::Layout;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 use ratatui::style::Modifier;
@@ -18,8 +25,9 @@ use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::Block;
 use ratatui::widgets::Borders;
+use ratatui::widgets::Clear;
 use ratatui::widgets::Paragraph;
-use ratatui::widgets::StatefulWidget;
+use ratatui::widgets::Widget;
 use ratatui::widgets::Wrap;
 use shadow_core::engine::ShadowEngine;
 use shadow_core::model::Message;
@@ -29,7 +37,10 @@ use shadow_core::model::ToolState;
 use shadow_core::utils::format_timestamp;
 use shadow_core::utils::truncate;
 
-const TREE_MAX_HEIGHT: u16 = 28;
+#[derive(Clone)]
+enum Segment {
+    Lines(Vec<Line<'static>>),
+}
 
 pub fn render_chat(
     f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine,
@@ -39,22 +50,144 @@ pub fn render_chat(
         return;
     }
 
-    // ── Build a flat list of segments ────────────────────────────────────────
-    // Each segment is either a block of Lines (text) or a MemoryTree (widget).
-    // We need total virtual height to compute scroll, same as before.
+    f.render_widget(Clear, area);
 
-    enum Segment {
-        Lines(Vec<Line<'static>>),
-        Tree { msg_idx: usize, height: u16 },
+    let segments = build_segments(shadow_engine, tui_state);
+    let total_rows = total_segment_rows(&segments, area.width);
+    let visible_top = visible_top(total_rows, area.height as usize, tui_state);
+    render_chat_slice(
+        f.buffer_mut(),
+        area,
+        tui_state,
+        shadow_engine,
+        &segments,
+        visible_top,
+    );
+}
+
+pub fn persist_chat_scrollback(
+    terminal: &mut DefaultTerminal, tui_state: &mut TuiAppState, shadow_engine: &mut ShadowEngine,
+) -> std::io::Result<()> {
+    sync_chat_scrollback(terminal, tui_state, shadow_engine, false)
+}
+
+pub fn flush_chat_transcript(
+    terminal: &mut DefaultTerminal, tui_state: &mut TuiAppState, shadow_engine: &mut ShadowEngine,
+) -> std::io::Result<()> {
+    sync_chat_scrollback(terminal, tui_state, shadow_engine, true)
+}
+
+pub fn ensure_memory_cursor_visible(
+    tui_state: &mut TuiAppState, shadow_engine: &ShadowEngine,
+) -> color_eyre::Result<()> {
+    let Some(focus_idx) = tui_state.memory_focus else {
+        return Ok(());
+    };
+
+    let terminal_size = crossterm::terminal::size()?;
+    let total_area = Rect::from((
+        ratatui::layout::Position::ORIGIN,
+        ratatui::layout::Size::new(terminal_size.0, terminal_size.1),
+    ));
+    let chat_area = chat_area(total_area, tui_state);
+    if chat_area.height == 0 || chat_area.width == 0 {
+        return Ok(());
     }
 
-    let mut segments: Vec<Segment> = vec![];
+    let Some(target_row) =
+        memory_cursor_row(focus_idx, shadow_engine, tui_state.tick, chat_area.width)
+    else {
+        return Ok(());
+    };
+
+    let segments = build_segments(shadow_engine, tui_state);
+    let total_rows = total_segment_rows(&segments, chat_area.width);
+    let viewport_rows = chat_area.height as usize;
+    let max_scroll = total_rows.saturating_sub(viewport_rows);
+    let current_top = visible_top(total_rows, viewport_rows, tui_state);
+    let current_bottom = current_top.saturating_add(viewport_rows.saturating_sub(1));
+
+    let desired_top = if target_row < current_top {
+        target_row
+    } else if target_row > current_bottom {
+        target_row.saturating_sub(viewport_rows.saturating_sub(1))
+    } else {
+        return Ok(());
+    }
+    .min(max_scroll);
+
+    tui_state.scroll_offset = max_scroll.saturating_sub(desired_top);
+    tui_state.auto_scroll = tui_state.scroll_offset == 0;
+    Ok(())
+}
+
+fn sync_chat_scrollback(
+    terminal: &mut DefaultTerminal, tui_state: &mut TuiAppState, shadow_engine: &mut ShadowEngine,
+    include_visible_viewport: bool,
+) -> std::io::Result<()> {
+    if tui_state.history_mode {
+        tui_state.persisted_chat_rows = 0;
+        tui_state.persisted_chat_width = 0;
+        return Ok(());
+    }
+
+    if tui_state.slash_mode {
+        return Ok(());
+    }
+
+    let total_area = Rect::from((ratatui::layout::Position::ORIGIN, terminal.size()?));
+    let chat_area = chat_area(total_area, tui_state);
+    if chat_area.height == 0 || chat_area.width == 0 {
+        tui_state.persisted_chat_rows = 0;
+        tui_state.persisted_chat_width = chat_area.width;
+        return Ok(());
+    }
+
+    if tui_state.persisted_chat_width != chat_area.width {
+        tui_state.persisted_chat_rows = 0;
+        tui_state.persisted_chat_width = chat_area.width;
+    }
+
+    let segments = build_segments(shadow_engine, tui_state);
+    let total_rows = total_segment_rows(&segments, chat_area.width);
+    let persisted_target = if include_visible_viewport {
+        total_rows
+    } else {
+        total_rows.saturating_sub(chat_area.height as usize)
+    };
+
+    if persisted_target < tui_state.persisted_chat_rows {
+        tui_state.persisted_chat_rows = 0;
+    }
+
+    let mut next_row = tui_state.persisted_chat_rows;
+    let mut pending_rows = persisted_target.saturating_sub(tui_state.persisted_chat_rows);
+
+    while pending_rows > 0 {
+        let chunk_rows = pending_rows.min(u16::MAX as usize) as u16;
+        terminal.insert_before(chunk_rows, |buf| {
+            render_chat_slice(buf, buf.area, tui_state, shadow_engine, &segments, next_row);
+        })?;
+        next_row += chunk_rows as usize;
+        pending_rows -= chunk_rows as usize;
+    }
+
+    tui_state.persisted_chat_rows = persisted_target;
+    Ok(())
+}
+
+fn build_segments(shadow_engine: &ShadowEngine, tui_state: &TuiAppState) -> Vec<Segment> {
+    let mut segments = Vec::new();
 
     for (msg_idx, msg) in shadow_engine.messages.iter().enumerate() {
         match &msg.kind {
             MessageKind::MemoryTree(tree) => {
-                let h = tree_render_height(tree, area.width).min(TREE_MAX_HEIGHT);
-                segments.push(Segment::Tree { msg_idx, height: h });
+                let lines = tree_to_lines(
+                    tree,
+                    tui_state.memory_focus == Some(msg_idx),
+                    tui_state.memory_focus == Some(msg_idx) && tui_state.memory_edit_mode,
+                );
+                segments.push(Segment::Lines(lines));
                 segments.push(Segment::Lines(vec![Line::from("")]));
             }
             _ => {
@@ -67,121 +200,155 @@ pub fn render_chat(
         }
     }
 
-    // ── Compute total virtual height ─────────────────────────────────────────
+    segments
+}
 
-    let total_virtual: usize = segments
-        .iter()
-        .map(|s| match s {
-            Segment::Lines(lines) => lines.len(),
-            Segment::Tree { height, .. } => *height as usize,
-        })
-        .sum();
+fn memory_cursor_row(
+    focus_idx: usize, shadow_engine: &ShadowEngine, tick: u64, available_width: u16,
+) -> Option<usize> {
+    let mut row = 0usize;
 
-    let viewport_height = area.height as usize;
-    let max_scroll = total_virtual.saturating_sub(viewport_height);
+    for (msg_idx, message) in shadow_engine.messages.iter().enumerate() {
+        match &message.kind {
+            MessageKind::MemoryTree(tree) => {
+                if msg_idx == focus_idx {
+                    return Some(row + tree_cursor_screen_row(tree, available_width));
+                }
+                row += tree_render_height(tree, available_width) as usize + 1;
+            }
+            _ => {
+                let mut lines = message_to_lines(message, tick);
+                if message.indent == 0 {
+                    lines.push(Line::from(""));
+                }
+                row += lines_height(&lines, available_width);
+            }
+        }
+    }
 
-    let scroll_top = if tui_state.auto_scroll {
-        max_scroll
-    } else {
-        max_scroll.saturating_sub(tui_state.scroll_offset.min(max_scroll))
-    };
+    None
+}
 
-    // ── Walk segments, skip scrolled-past content, render visible ────────────
+fn render_chat_slice(
+    buf: &mut Buffer, area: Rect, _tui_state: &TuiAppState, _shadow_engine: &mut ShadowEngine,
+    segments: &[Segment], start_row: usize,
+) {
+    let mut virtual_y = 0usize;
+    let mut screen_y = area.top();
 
-    let mut virtual_y: usize = 0; // position in virtual space
-    let mut screen_y: u16 = area.top(); // position on screen
-
-    for segment in &mut segments {
+    for segment in segments {
         if screen_y >= area.bottom() {
+            break;
+        }
+
+        let seg_height = segment_height(segment, area.width);
+        let seg_end = virtual_y + seg_height;
+
+        if seg_end <= start_row {
+            virtual_y = seg_end;
+            continue;
+        }
+
+        let skip = start_row.saturating_sub(virtual_y).min(seg_height);
+        let remaining_screen = (area.bottom() - screen_y) as usize;
+        let visible_count = seg_height.saturating_sub(skip).min(remaining_screen);
+
+        if visible_count == 0 {
             break;
         }
 
         match segment {
             Segment::Lines(lines) => {
-                let seg_height = lines.len();
-                let seg_end = virtual_y + seg_height;
-
-                if seg_end <= scroll_top {
-                    // entirely scrolled past, skip
-                    virtual_y = seg_end;
-                    continue;
-                }
-
-                // How many lines of this segment are scrolled off the top
-                let skip = if virtual_y < scroll_top {
-                    scroll_top - virtual_y
-                } else {
-                    0
-                };
-                let visible_lines: Vec<Line> = lines.iter().skip(skip).cloned().collect();
-                let visible_count = visible_lines.len().min((area.bottom() - screen_y) as usize);
-                let visible_lines: Vec<Line> =
-                    visible_lines.into_iter().take(visible_count).collect();
-
                 let seg_rect = Rect::new(area.left(), screen_y, area.width, visible_count as u16);
-
-                f.render_widget(
-                    Paragraph::new(visible_lines).wrap(Wrap { trim: false }),
-                    seg_rect,
-                );
-
-                screen_y += visible_count as u16;
-                virtual_y = seg_end;
-            }
-
-            Segment::Tree { msg_idx, height } => {
-                let seg_height = *height as usize;
-                let seg_end = virtual_y + seg_height;
-
-                if seg_end <= scroll_top {
-                    virtual_y = seg_end;
-                    continue;
-                }
-
-                if screen_y >= area.bottom() {
-                    virtual_y = seg_end;
-                    continue;
-                }
-
-                let skip = if virtual_y < scroll_top {
-                    scroll_top - virtual_y
-                } else {
-                    0
-                };
-
-                let remaining_screen = (area.bottom() - screen_y) as usize;
-                let visible_count = seg_height.saturating_sub(skip).min(remaining_screen);
-
-                if visible_count == 0 {
-                    virtual_y = seg_end;
-                    continue;
-                }
-
-                let tree_rect = Rect::new(area.left(), screen_y, area.width, visible_count as u16);
-                let focused = tui_state.memory_focus == Some(*msg_idx);
-
-                if let Some(Message {
-                    kind: MessageKind::MemoryTree(tree),
-                    ..
-                }) = shadow_engine.messages.get_mut(*msg_idx)
-                {
-                    if focused {
-                        f.buffer_mut()
-                            .set_style(tree_rect, Style::default().bg(Color::Rgb(52, 55, 68)));
-                    }
-                    MemoryTreeWidget {
-                        focused,
-                        editing: focused && tui_state.memory_edit_mode,
-                        viewport_height: visible_count as u16,
-                        scroll_offset_rows: skip as u16,
-                    }
-                    .render(tree_rect, f.buffer_mut(), tree);
-                }
-
-                screen_y += visible_count as u16;
-                virtual_y = seg_end;
+                Paragraph::new(lines.clone())
+                    .wrap(Wrap { trim: false })
+                    .scroll((skip as u16, 0))
+                    .render(seg_rect, buf);
             }
         }
+
+        screen_y += visible_count as u16;
+        virtual_y = seg_end;
+    }
+}
+
+fn total_segment_rows(segments: &[Segment], available_width: u16) -> usize {
+    segments
+        .iter()
+        .map(|segment| segment_height(segment, available_width))
+        .sum()
+}
+
+fn segment_height(segment: &Segment, available_width: u16) -> usize {
+    match segment {
+        Segment::Lines(lines) => lines_height(lines, available_width),
+    }
+}
+
+fn lines_height(lines: &[Line<'static>], available_width: u16) -> usize {
+    let width = available_width.max(1);
+    let sentinel_style = Style::default()
+        .fg(Color::Rgb(1, 2, 3))
+        .bg(Color::Rgb(1, 2, 3));
+
+    let mut rendered_lines = lines.to_vec();
+    rendered_lines.push(Line::from(vec![Span::styled("█", sentinel_style)]));
+
+    let upper_bound = lines
+        .iter()
+        .map(|line| {
+            let line_width = line.width().max(1);
+            line_width.div_ceil(width as usize)
+        })
+        .sum::<usize>()
+        .saturating_add(1)
+        .max(1);
+
+    let area = Rect::new(0, 0, width, upper_bound.min(u16::MAX as usize) as u16);
+    let mut temp_buf = Buffer::empty(area);
+    Paragraph::new(rendered_lines)
+        .wrap(Wrap { trim: false })
+        .render(area, &mut temp_buf);
+
+    for row in 0..area.height {
+        for col in 0..area.width {
+            let cell = &temp_buf[(col, row)];
+            if cell.symbol() == "█" && cell.style().fg == Some(Color::Rgb(1, 2, 3)) {
+                return row as usize;
+            }
+        }
+    }
+
+    upper_bound.saturating_sub(1)
+}
+
+fn chat_area(total_area: Rect, tui_state: &TuiAppState) -> Rect {
+    let bottom_height = if tui_state.slash_mode {
+        SLASH_COMMANDS.len() as u16
+    } else {
+        1
+    };
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(0),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(bottom_height),
+        ])
+        .split(total_area);
+
+    chunks[0]
+}
+
+fn visible_top(total_rows: usize, viewport_rows: usize, tui_state: &TuiAppState) -> usize {
+    let max_scroll = total_rows.saturating_sub(viewport_rows);
+    if tui_state.auto_scroll {
+        max_scroll
+    } else {
+        max_scroll.saturating_sub(tui_state.scroll_offset.min(max_scroll))
     }
 }
 
@@ -375,4 +542,36 @@ fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {
         ]));
     }
     lines
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wrapped_line_height_expands_for_long_lines() {
+        let lines = vec![Line::from("123456789")];
+        assert_eq!(lines_height(&lines, 4), 3);
+    }
+
+    #[test]
+    fn lines_height_counts_blank_lines() {
+        let lines = vec![Line::from("abc"), Line::from("")];
+        assert_eq!(lines_height(&lines, 10), 2);
+    }
+
+    #[test]
+    fn visible_top_uses_scroll_offset_when_auto_scroll_disabled() {
+        let mut state = TuiAppState::default();
+        state.auto_scroll = false;
+        state.scroll_offset = 3;
+
+        assert_eq!(visible_top(20, 5, &state), 12);
+    }
+
+    #[test]
+    fn visible_top_stays_at_latest_when_auto_scroll_enabled() {
+        let state = TuiAppState::default();
+        assert_eq!(visible_top(20, 5, &state), 15);
+    }
 }
