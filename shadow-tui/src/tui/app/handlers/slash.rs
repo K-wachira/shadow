@@ -54,6 +54,7 @@ pub async fn handle_key_slash(
     key: KeyCode, app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<bool> {
+    let max = SLASH_COMMANDS.len().saturating_sub(1);
     match key {
         KeyCode::Esc => handle_escape(app_state, input_buf),
         KeyCode::Enter => {
