@@ -240,7 +240,7 @@ async fn handle_action_reflect(
     let (current_mind, logs_json) = gather_reflect_input(&engine.db, &engine.paths)?;
     let llm_client = Arc::clone(&engine.llm_client);
     let mind_path = engine.paths.clone();
-    app_state.stream_start = Some(Instant::now());
+    app_state.background_op_start = Some(Instant::now());
     tokio::spawn(async move {
         match reflect_with_input(&llm_client, current_mind, logs_json, &mind_path ).await {
             Ok(new_mind) => {
@@ -251,6 +251,7 @@ async fn handle_action_reflect(
             }
         }
     });
+    app_state.background_op_start = None;
     Ok(())
 }
 
