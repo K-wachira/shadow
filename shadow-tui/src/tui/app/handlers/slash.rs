@@ -64,14 +64,14 @@ pub async fn handle_key_slash(
         KeyCode::Up => {
             if app_state.slash_cursor == 0 {
                 app_state.slash_cursor = max
-            }else{
+            } else {
                 app_state.slash_cursor = app_state.slash_cursor.saturating_sub(1);
             }
         }
         KeyCode::Down => {
             if app_state.slash_cursor == max {
-                 app_state.slash_cursor = 0;
-            }else{
+                app_state.slash_cursor = 0;
+            } else {
                 app_state.slash_cursor = (app_state.slash_cursor + 1).min(max);
             }
         }
