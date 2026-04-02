@@ -1,4 +1,5 @@
 use crate::ask::ask;
+use crate::config::Config;
 use crate::db::Database;
 use crate::db::EntryLog;
 use crate::db::SessionMessages;
@@ -14,6 +15,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
+use crate::setup::ShadowPaths;
 
 pub struct ShadowEngine {
     pub db: Arc<Database>,

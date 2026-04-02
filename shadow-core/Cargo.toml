@@ -25,6 +25,7 @@ async-stream = "0.3"
 json5 = "1.3.0"
 futures = "0.3.32"
 hotpath = "0.14"
+toml = "0.8"
 
 [features]
 hotpath = ["hotpath/hotpath"]
