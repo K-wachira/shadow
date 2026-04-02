@@ -9,14 +9,13 @@ use serde_json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use crate::setup::ShadowPaths;
 
-const MIND_SKILL_PATH: &str = "shadow-core/skill.md/mind_skill.md";
-const MIND_PATH: &str = "shadow-core/data/shadowmind.json5";
 const LOG_LIMIT: i32 = 30;
 
 // called from main thread — fetches logs before spawning
-pub fn gather_reflect_input(db: &Arc<Database>) -> Result<(String, String)> {
-    let current_mind = std::fs::read_to_string(mind_path()).unwrap_or_else(|_| String::from("{}"));
+pub fn gather_reflect_input(db: &Arc<Database>, paths: &ShadowPaths) -> Result<(String, String)> {
+    let current_mind = std::fs::read_to_string(&paths.mind).unwrap_or_else(|_| String::from("{}"));
     let logs = db.get_logs(Some(LOG_LIMIT))?;
     let logs_json = serde_json::to_string_pretty(&logs)?;
     Ok((current_mind, logs_json))
@@ -24,9 +23,9 @@ pub fn gather_reflect_input(db: &Arc<Database>) -> Result<(String, String)> {
 
 // spawnable — no db access
 pub async fn reflect_with_input(
-    llm_client: &Arc<LlmClient>, current_mind: String, logs_json: String,
+    llm_client: &Arc<LlmClient>, current_mind: String, logs_json: String, paths: &ShadowPaths
 ) -> Result<ShadowMind> {
-    let skill = std::fs::read_to_string(MIND_SKILL_PATH)?;
+    let skill = std::fs::read_to_string(&paths.mind_skill)?;
 
     let prompt = format!(
         "{skill}\n\n--- Current shadow.mind ---\n{current_mind}\n\n--- Recent Logs ---\n{logs_json}\n\n---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation.",
@@ -40,31 +39,26 @@ pub async fn reflect_with_input(
     let new_mind: ShadowMind = json5::from_str(&response)
         .map_err(|e| color_eyre::eyre::eyre!("Failed to parse shadow.mind: {}", e))?;
 
-    save(&new_mind)?;
+    save(&new_mind, &paths.mind)?;
     Ok(new_mind)
 }
 
-pub fn mind_path() -> PathBuf {
-    PathBuf::from(MIND_PATH)
-}
 
-pub fn load() -> Result<ShadowMind> {
-    let path = mind_path();
-    if !path.exists() {
+pub fn load( mind_path: &PathBuf) -> Result<ShadowMind> {
+    if !mind_path.exists() {
         return Ok(init());
     }
-    let contents = std::fs::read_to_string(&path)?;
+    let contents = std::fs::read_to_string(&mind_path)?;
     let mind: ShadowMind = json5::from_str(&contents)?;
     Ok(mind)
 }
 
-pub fn save(mind: &ShadowMind) -> Result<()> {
-    let path = mind_path();
-    if let Some(parent) = path.parent() {
+pub fn save(mind: &ShadowMind, mind_path: &PathBuf) -> Result<()> {
+    if let Some(parent) = mind_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
     let contents = json5::to_string(mind)?;
-    std::fs::write(&path, contents)?;
+    std::fs::write(&mind_path, contents)?;
     Ok(())
 }
 

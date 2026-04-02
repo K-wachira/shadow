@@ -11,6 +11,7 @@ use ollama_rs::generation::completion::request::GenerationRequest;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio_stream::StreamExt;
+use crate::config::Backend;
 
 pub type LlmStream = Pin<Box<dyn Stream<Item = String> + Send>>;
 
@@ -25,21 +26,21 @@ pub struct LlmClient {
 }
 
 impl LlmClient {
-    pub async fn init(provider: &str, model: &str) -> color_eyre::Result<Self> {
+    pub async fn init(provider: &Backend, model: String) -> color_eyre::Result<Self> {
         let provider = Self::build_provider(provider).await?;
         Ok(Self {
             provider: provider,
-            model_name: model.to_string(),
+            model_name: model,
         })
     }
 
-    async fn build_provider(provider: &str) -> color_eyre::Result<LlmProvider> {
+    async fn build_provider(provider: &Backend) -> color_eyre::Result<LlmProvider> {
         match provider {
-            "ollama" => {
+            Backend::Ollama => {
                 let ollama = Ollama::new("http://localhost".to_string(), 11434);
                 Ok(LlmProvider::Ollama(ollama))
             }
-            "mistralrs" => {
+            Backend::MistralRs => {
                 let model = GgufModelBuilder::new(
                     "bartowski/Qwen2.5-3B-Instruct-GGUF",
                     vec!["Qwen2.5-3B-Instruct-Q4_K_M.gguf".to_string()],
@@ -50,7 +51,9 @@ impl LlmClient {
                 .map_err(|e| color_eyre::eyre::eyre!(e))?;
                 Ok(LlmProvider::MistralRs(Arc::new(model)))
             }
-            _ => Err(color_eyre::eyre::eyre!("Unknown provider: {}", provider)),
+            Backend::Unknown => {
+                Err(color_eyre::eyre::eyre!("Unknown provider: {:?}", provider))
+            },
         }
     }
 

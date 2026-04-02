@@ -23,11 +23,13 @@ pub struct ShadowEngine {
     pub assistant_state: AssistantState,
     pub messages: Vec<Message>,
     pub mind: ShadowMind,
+    pub config: Config,
+    pub paths: ShadowPaths,
 }
 
 impl ShadowEngine {
-    pub fn new(db: Arc<Database>, llm_client: Arc<LlmClient>) -> color_eyre::Result<Self> {
-        let mind = mind::load()?;
+    pub fn new(db: Arc<Database>, llm_client: Arc<LlmClient>, config: Config, paths: ShadowPaths) -> color_eyre::Result<Self> {
+        let mind = mind::load(&paths.mind)?;
         Ok(Self {
             db,
             llm_client,
@@ -36,6 +38,8 @@ impl ShadowEngine {
             assistant_state: AssistantState::Idle,
             messages: vec![Message::logo(String::new())],
             mind,
+            config,
+            paths,
         })
     }
 
@@ -67,7 +71,7 @@ impl ShadowEngine {
             .insert_message(self.session_id, "user", prompt, None)?;
         self.assistant_state = AssistantState::Thinking { secs: 0 };
 
-        let enriched = ask(&prompt.to_string(), &self.db, &self.messages)
+        let enriched = ask(&prompt.to_string(), &self.db, &self.messages,  &self.paths)
             .map_err(|e| color_eyre::eyre::eyre!(e))?;
         let llm_client = Arc::clone(&self.llm_client);
 
@@ -159,10 +163,7 @@ impl ShadowEngine {
     }
 
     pub fn ingest_icloud_logs(&self) -> color_eyre::Result<Vec<EntryLog>> {
-        let dir = dirs::home_dir()
-            .unwrap()
-            .join("Library/Mobile Documents/com~apple~CloudDocs/ShadowLogs/");
-        let logs = file_ingest(&self.db, &dir)?;
+        let logs = file_ingest(&self.db, &self.config.ingest.source_path)?;
         eprintln!("ingest complete");
         Ok(logs)
     }

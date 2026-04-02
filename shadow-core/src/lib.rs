@@ -8,3 +8,5 @@ pub mod llm;
 pub mod mind;
 pub mod model;
 pub mod utils;
+pub mod setup;
+pub mod config;

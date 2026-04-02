@@ -2,17 +2,19 @@ use crate::db::Database;
 use crate::db::EntryLog;
 use crate::model::Message;
 use crate::model::MessageKind;
+use crate::setup::ShadowPaths;
 
 pub fn ask(
-    query: &String, conn: &Database, curr_content: &Vec<Message>,
+    query: &String, conn: &Database, curr_content: &Vec<Message>, paths: &ShadowPaths
 ) -> color_eyre::Result<String> {
     let log_limit = Some(100);
-    let results: String = match conn.get_logs(log_limit) {
+    let results: String = match conn.get_logs(log_limit) { //TODO get smart logs  not just recent
         Ok(context) => build_prompt(
-            &format_context(context),
+            &format_logs(context),
             &query,
             build_current_history(curr_content)?,
-        ),
+            paths
+        )?,
         Err(err) => err.to_string(),
     };
 
@@ -37,18 +39,20 @@ fn build_current_history(curr_messages: &Vec<Message>) -> color_eyre::Result<Str
     Ok(history_blob)
 }
 
-fn build_prompt(context: &str, query: &str, history_blob: String) -> String {
-    format!(
+fn build_prompt(context: &str, query: &str, history_blob: String, paths: &ShadowPaths) -> color_eyre::Result<String> {
+    let mind = std::fs::read_to_string(&paths.mind)?;
+
+    Ok(format!(
         "
         You are Shadow, a personal assistant with access to the user's logs. 
-        Current Chat History:\n {} \n\n\
-         Context:\n{}\n\n\
-         Question: {}",
-        history_blob, context, query
-    )
+        Current shadow.mind :---\n{mind}\n\n
+        Current Chat History :---\n {history_blob} \n\n\
+        Recent Logs :---\n{context}\n\n\
+        Current Question:--- {query}"
+    ))
 }
 
-fn format_context(logs: Vec<EntryLog>) -> String {
+fn format_logs(logs: Vec<EntryLog>) -> String {
     logs.iter()
         .map(|log| {
             format!(

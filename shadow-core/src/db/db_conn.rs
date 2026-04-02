@@ -14,8 +14,8 @@ pub struct Database {
 
 impl Database {
     // Initialize a new DB
-    pub fn new(path: &str) -> color_eyre::Result<Self> {
-        let conn = Connection::open(path)?;
+    pub fn init(path: &PathBuf) -> color_eyre::Result<Self> {
+        let conn = Connection::open(&path)?;
         let db = Database { conn };
         db.conn.execute_batch("PRAGMA foreign_keys = ON;")?;
         db.initialize_logs()?;
