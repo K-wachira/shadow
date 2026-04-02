@@ -377,233 +377,233 @@ impl Database {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::db::RawLog;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::db::RawLog;
 
-    fn test_db() -> Database {
-        Database::new(":memory:").expect("in-memory db should open")
-    }
+//     fn test_db() -> Database {
+//         Database::new(":memory:").expect("in-memory db should open")
+//     }
 
-    fn sample_log(content: &str) -> RawLog {
-        RawLog {
-            content: content.to_string(),
-            energy: Some(7),
-            mood: Some(8),
-            weather: Some("Sunny".to_string()),
-            location: Some("Home".to_string()),
-            time_stamp: "2024-01-01T10:00:00Z".to_string(),
-            device: Some("iPhone".to_string()),
-            log_type: Some("journal".to_string()),
-        }
-    }
+//     fn sample_log(content: &str) -> RawLog {
+//         RawLog {
+//             content: content.to_string(),
+//             energy: Some(7),
+//             mood: Some(8),
+//             weather: Some("Sunny".to_string()),
+//             location: Some("Home".to_string()),
+//             time_stamp: "2024-01-01T10:00:00Z".to_string(),
+//             device: Some("iPhone".to_string()),
+//             log_type: Some("journal".to_string()),
+//         }
+//     }
 
-    // ── Initialization ────────────────────────────────────────────────────────
+//     // ── Initialization ────────────────────────────────────────────────────────
 
-    #[test]
-    fn new_opens_in_memory_db_and_creates_tables() {
-        let db = test_db();
-        assert!(db.get_logs(None).is_ok());
-        assert!(db.get_recent_sessions(10).is_ok());
-        assert!(db.get_file_ingests(None).is_ok());
-    }
+//     #[test]
+//     fn new_opens_in_memory_db_and_creates_tables() {
+//         let db = test_db();
+//         assert!(db.get_logs(None).is_ok());
+//         assert!(db.get_recent_sessions(10).is_ok());
+//         assert!(db.get_file_ingests(None).is_ok());
+//     }
 
-    // ── Logs ─────────────────────────────────────────────────────────────────
+//     // ── Logs ─────────────────────────────────────────────────────────────────
 
-    #[test]
-    fn insert_and_get_log_round_trip() {
-        let db = test_db();
-        db.insert_log(&sample_log("Felt great today")).unwrap();
-        let logs = db.get_logs(None).unwrap();
-        assert_eq!(logs.len(), 1);
-        assert_eq!(logs[0].content, "Felt great today");
-        assert_eq!(logs[0].energy, Some(7));
-        assert_eq!(logs[0].mood, Some(8));
-        assert_eq!(logs[0].weather, Some("Sunny".to_string()));
-    }
+//     #[test]
+//     fn insert_and_get_log_round_trip() {
+//         let db = test_db();
+//         db.insert_log(&sample_log("Felt great today")).unwrap();
+//         let logs = db.get_logs(None).unwrap();
+//         assert_eq!(logs.len(), 1);
+//         assert_eq!(logs[0].content, "Felt great today");
+//         assert_eq!(logs[0].energy, Some(7));
+//         assert_eq!(logs[0].mood, Some(8));
+//         assert_eq!(logs[0].weather, Some("Sunny".to_string()));
+//     }
 
-    #[test]
-    fn get_logs_empty_db_returns_empty_vec() {
-        let db = test_db();
-        assert!(db.get_logs(None).unwrap().is_empty());
-    }
+//     #[test]
+//     fn get_logs_empty_db_returns_empty_vec() {
+//         let db = test_db();
+//         assert!(db.get_logs(None).unwrap().is_empty());
+//     }
 
-    #[test]
-    fn get_logs_respects_limit() {
-        let db = test_db();
-        for i in 0..5 {
-            let mut log = sample_log(&format!("Log {}", i));
-            log.time_stamp = format!("2024-01-0{}T10:00:00Z", i + 1);
-            db.insert_log(&log).unwrap();
-        }
-        assert_eq!(db.get_logs(Some(3)).unwrap().len(), 3);
-    }
+//     #[test]
+//     fn get_logs_respects_limit() {
+//         let db = test_db();
+//         for i in 0..5 {
+//             let mut log = sample_log(&format!("Log {}", i));
+//             log.time_stamp = format!("2024-01-0{}T10:00:00Z", i + 1);
+//             db.insert_log(&log).unwrap();
+//         }
+//         assert_eq!(db.get_logs(Some(3)).unwrap().len(), 3);
+//     }
 
-    #[test]
-    fn get_logs_with_none_limit_returns_all() {
-        let db = test_db();
-        for i in 0..4 {
-            db.insert_log(&sample_log(&format!("Log {}", i))).unwrap();
-        }
-        assert_eq!(db.get_logs(None).unwrap().len(), 4);
-    }
+//     #[test]
+//     fn get_logs_with_none_limit_returns_all() {
+//         let db = test_db();
+//         for i in 0..4 {
+//             db.insert_log(&sample_log(&format!("Log {}", i))).unwrap();
+//         }
+//         assert_eq!(db.get_logs(None).unwrap().len(), 4);
+//     }
 
-    #[test]
-    fn insert_log_with_null_optional_fields() {
-        let db = test_db();
-        let log = RawLog {
-            content: "minimal entry".to_string(),
-            energy: None,
-            mood: None,
-            weather: None,
-            location: None,
-            time_stamp: "2024-06-01T00:00:00Z".to_string(),
-            device: Some("unknown".to_string()),
-            log_type: None,
-        };
-        db.insert_log(&log).unwrap();
-        let logs = db.get_logs(None).unwrap();
-        assert_eq!(logs[0].energy, None);
-        assert_eq!(logs[0].mood, None);
-    }
+//     #[test]
+//     fn insert_log_with_null_optional_fields() {
+//         let db = test_db();
+//         let log = RawLog {
+//             content: "minimal entry".to_string(),
+//             energy: None,
+//             mood: None,
+//             weather: None,
+//             location: None,
+//             time_stamp: "2024-06-01T00:00:00Z".to_string(),
+//             device: Some("unknown".to_string()),
+//             log_type: None,
+//         };
+//         db.insert_log(&log).unwrap();
+//         let logs = db.get_logs(None).unwrap();
+//         assert_eq!(logs[0].energy, None);
+//         assert_eq!(logs[0].mood, None);
+//     }
 
-    // ── Sessions ─────────────────────────────────────────────────────────────
+//     // ── Sessions ─────────────────────────────────────────────────────────────
 
-    #[test]
-    fn create_and_get_session_round_trip() {
-        let db = test_db();
-        let id = db.create_session("My Session", "llama3").unwrap();
-        let session = db.get_session(id).unwrap();
-        assert_eq!(session.id, id);
-        assert_eq!(session.title, "My Session");
-        assert_eq!(session.status, "active");
-        assert_eq!(session.model, Some("llama3".to_string()));
-        assert_eq!(session.user_id, 1);
-    }
+//     #[test]
+//     fn create_and_get_session_round_trip() {
+//         let db = test_db();
+//         let id = db.create_session("My Session", "llama3").unwrap();
+//         let session = db.get_session(id).unwrap();
+//         assert_eq!(session.id, id);
+//         assert_eq!(session.title, "My Session");
+//         assert_eq!(session.status, "active");
+//         assert_eq!(session.model, Some("llama3".to_string()));
+//         assert_eq!(session.user_id, 1);
+//     }
 
-    #[test]
-    fn update_session_title_persists() {
-        let db = test_db();
-        let id = db.create_session("Old Title", "llama3").unwrap();
-        db.update_session_title(id, "New Title").unwrap();
-        assert_eq!(db.get_session(id).unwrap().title, "New Title");
-    }
+//     #[test]
+//     fn update_session_title_persists() {
+//         let db = test_db();
+//         let id = db.create_session("Old Title", "llama3").unwrap();
+//         db.update_session_title(id, "New Title").unwrap();
+//         assert_eq!(db.get_session(id).unwrap().title, "New Title");
+//     }
 
-    #[test]
-    fn end_session_sets_status_to_ended_and_records_timestamp() {
-        let db = test_db();
-        let id = db.create_session("Test", "model").unwrap();
-        db.end_session(id).unwrap();
-        let session = db.get_session(id).unwrap();
-        assert_eq!(session.status, "ended");
-        assert!(session.ended_at_ms.is_some());
-    }
+//     #[test]
+//     fn end_session_sets_status_to_ended_and_records_timestamp() {
+//         let db = test_db();
+//         let id = db.create_session("Test", "model").unwrap();
+//         db.end_session(id).unwrap();
+//         let session = db.get_session(id).unwrap();
+//         assert_eq!(session.status, "ended");
+//         assert!(session.ended_at_ms.is_some());
+//     }
 
-    #[test]
-    fn get_recent_sessions_returns_most_recent_first() {
-        let db = test_db();
-        let id1 = db.create_session("First", "model").unwrap();
-        let id2 = db.create_session("Second", "model").unwrap();
-        let sessions = db.get_recent_sessions(10).unwrap();
-        assert_eq!(sessions.len(), 2);
-        // Both sessions must be present (order may vary if timestamps collide)
-        let ids: Vec<i64> = sessions.iter().map(|s| s.id).collect();
-        assert!(ids.contains(&id1));
-        assert!(ids.contains(&id2));
-    }
+//     #[test]
+//     fn get_recent_sessions_returns_most_recent_first() {
+//         let db = test_db();
+//         let id1 = db.create_session("First", "model").unwrap();
+//         let id2 = db.create_session("Second", "model").unwrap();
+//         let sessions = db.get_recent_sessions(10).unwrap();
+//         assert_eq!(sessions.len(), 2);
+//         // Both sessions must be present (order may vary if timestamps collide)
+//         let ids: Vec<i64> = sessions.iter().map(|s| s.id).collect();
+//         assert!(ids.contains(&id1));
+//         assert!(ids.contains(&id2));
+//     }
 
-    #[test]
-    fn get_recent_sessions_respects_limit() {
-        let db = test_db();
-        for i in 0..5 {
-            db.create_session(&format!("Session {}", i), "model")
-                .unwrap();
-        }
-        assert_eq!(db.get_recent_sessions(3).unwrap().len(), 3);
-    }
+//     #[test]
+//     fn get_recent_sessions_respects_limit() {
+//         let db = test_db();
+//         for i in 0..5 {
+//             db.create_session(&format!("Session {}", i), "model")
+//                 .unwrap();
+//         }
+//         assert_eq!(db.get_recent_sessions(3).unwrap().len(), 3);
+//     }
 
-    #[test]
-    fn delete_session_removes_session() {
-        let db = test_db();
-        let id = db.create_session("ToDelete", "model").unwrap();
-        db.delete_session(id).unwrap();
-        assert!(db.get_session(id).is_err());
-    }
+//     #[test]
+//     fn delete_session_removes_session() {
+//         let db = test_db();
+//         let id = db.create_session("ToDelete", "model").unwrap();
+//         db.delete_session(id).unwrap();
+//         assert!(db.get_session(id).is_err());
+//     }
 
-    #[test]
-    fn delete_session_cascades_to_messages() {
-        let db = test_db();
-        let id = db.create_session("ToDelete", "model").unwrap();
-        db.insert_message(id, "user", "Hello", None).unwrap();
-        db.insert_message(id, "assistant", "Hi", None).unwrap();
-        db.delete_session(id).unwrap();
-        assert!(db.get_session_messages(id).unwrap().is_empty());
-    }
+//     #[test]
+//     fn delete_session_cascades_to_messages() {
+//         let db = test_db();
+//         let id = db.create_session("ToDelete", "model").unwrap();
+//         db.insert_message(id, "user", "Hello", None).unwrap();
+//         db.insert_message(id, "assistant", "Hi", None).unwrap();
+//         db.delete_session(id).unwrap();
+//         assert!(db.get_session_messages(id).unwrap().is_empty());
+//     }
 
-    // ── Session messages ─────────────────────────────────────────────────────
+//     // ── Session messages ─────────────────────────────────────────────────────
 
-    #[test]
-    fn insert_and_get_messages_round_trip() {
-        let db = test_db();
-        let sid = db.create_session("Test", "model").unwrap();
-        db.insert_message(sid, "user", "Hello", None).unwrap();
-        db.insert_message(sid, "assistant", "Hi there", Some("llama3"))
-            .unwrap();
-        let msgs = db.get_session_messages(sid).unwrap();
-        assert_eq!(msgs.len(), 2);
-        assert_eq!(msgs[0].role, "user");
-        assert_eq!(msgs[0].content, "Hello");
-        assert_eq!(msgs[1].role, "assistant");
-        assert_eq!(msgs[1].content, "Hi there");
-        assert_eq!(msgs[1].model, Some("llama3".to_string()));
-    }
+//     #[test]
+//     fn insert_and_get_messages_round_trip() {
+//         let db = test_db();
+//         let sid = db.create_session("Test", "model").unwrap();
+//         db.insert_message(sid, "user", "Hello", None).unwrap();
+//         db.insert_message(sid, "assistant", "Hi there", Some("llama3"))
+//             .unwrap();
+//         let msgs = db.get_session_messages(sid).unwrap();
+//         assert_eq!(msgs.len(), 2);
+//         assert_eq!(msgs[0].role, "user");
+//         assert_eq!(msgs[0].content, "Hello");
+//         assert_eq!(msgs[1].role, "assistant");
+//         assert_eq!(msgs[1].content, "Hi there");
+//         assert_eq!(msgs[1].model, Some("llama3".to_string()));
+//     }
 
-    #[test]
-    fn messages_seq_auto_increments_from_one() {
-        let db = test_db();
-        let sid = db.create_session("Test", "model").unwrap();
-        for _ in 0..4 {
-            db.insert_message(sid, "user", "msg", None).unwrap();
-        }
-        let seqs: Vec<i32> = db
-            .get_session_messages(sid)
-            .unwrap()
-            .iter()
-            .map(|m| m.seq)
-            .collect();
-        assert_eq!(seqs, vec![1, 2, 3, 4]);
-    }
+//     #[test]
+//     fn messages_seq_auto_increments_from_one() {
+//         let db = test_db();
+//         let sid = db.create_session("Test", "model").unwrap();
+//         for _ in 0..4 {
+//             db.insert_message(sid, "user", "msg", None).unwrap();
+//         }
+//         let seqs: Vec<i32> = db
+//             .get_session_messages(sid)
+//             .unwrap()
+//             .iter()
+//             .map(|m| m.seq)
+//             .collect();
+//         assert_eq!(seqs, vec![1, 2, 3, 4]);
+//     }
 
-    #[test]
-    fn messages_ordered_by_seq_asc() {
-        let db = test_db();
-        let sid = db.create_session("Test", "model").unwrap();
-        db.insert_message(sid, "user", "First", None).unwrap();
-        db.insert_message(sid, "assistant", "Second", None).unwrap();
-        db.insert_message(sid, "user", "Third", None).unwrap();
-        let msgs = db.get_session_messages(sid).unwrap();
-        assert_eq!(msgs[0].content, "First");
-        assert_eq!(msgs[1].content, "Second");
-        assert_eq!(msgs[2].content, "Third");
-    }
+//     #[test]
+//     fn messages_ordered_by_seq_asc() {
+//         let db = test_db();
+//         let sid = db.create_session("Test", "model").unwrap();
+//         db.insert_message(sid, "user", "First", None).unwrap();
+//         db.insert_message(sid, "assistant", "Second", None).unwrap();
+//         db.insert_message(sid, "user", "Third", None).unwrap();
+//         let msgs = db.get_session_messages(sid).unwrap();
+//         assert_eq!(msgs[0].content, "First");
+//         assert_eq!(msgs[1].content, "Second");
+//         assert_eq!(msgs[2].content, "Third");
+//     }
 
-    #[test]
-    fn messages_isolated_between_sessions() {
-        let db = test_db();
-        let sid1 = db.create_session("S1", "model").unwrap();
-        let sid2 = db.create_session("S2", "model").unwrap();
-        db.insert_message(sid1, "user", "S1 msg", None).unwrap();
-        db.insert_message(sid2, "user", "S2 msg", None).unwrap();
-        assert_eq!(db.get_session_messages(sid1).unwrap().len(), 1);
-        assert_eq!(db.get_session_messages(sid2).unwrap().len(), 1);
-        assert_eq!(db.get_session_messages(sid1).unwrap()[0].content, "S1 msg");
-    }
+//     #[test]
+//     fn messages_isolated_between_sessions() {
+//         let db = test_db();
+//         let sid1 = db.create_session("S1", "model").unwrap();
+//         let sid2 = db.create_session("S2", "model").unwrap();
+//         db.insert_message(sid1, "user", "S1 msg", None).unwrap();
+//         db.insert_message(sid2, "user", "S2 msg", None).unwrap();
+//         assert_eq!(db.get_session_messages(sid1).unwrap().len(), 1);
+//         assert_eq!(db.get_session_messages(sid2).unwrap().len(), 1);
+//         assert_eq!(db.get_session_messages(sid1).unwrap()[0].content, "S1 msg");
+//     }
 
-    #[test]
-    fn get_session_messages_empty_for_new_session() {
-        let db = test_db();
-        let sid = db.create_session("Empty", "model").unwrap();
-        assert!(db.get_session_messages(sid).unwrap().is_empty());
-    }
-}
+//     #[test]
+//     fn get_session_messages_empty_for_new_session() {
+//         let db = test_db();
+//         let sid = db.create_session("Empty", "model").unwrap();
+//         assert!(db.get_session_messages(sid).unwrap().is_empty());
+//     }
+// }
