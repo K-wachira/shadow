@@ -3,6 +3,10 @@ name = "shadow-tui"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "shadow"
+path = "src/main.rs"
+
 [dependencies]
 shadow-core = { path = "../shadow-core" }
 clap = { version = "4.5.60", features = ["derive"] }
