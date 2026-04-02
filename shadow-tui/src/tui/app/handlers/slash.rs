@@ -9,7 +9,6 @@ use shadow_core::engine::ShadowEngine;
 use shadow_core::json_tree::JsonTree;
 use shadow_core::mind::ShadowMind;
 use shadow_core::mind::gather_reflect_input;
-use shadow_core::mind::mind_path;
 use shadow_core::mind::reflect_with_input;
 use shadow_core::model::AssistantState;
 use shadow_core::model::Message;
@@ -238,11 +237,12 @@ async fn handle_action_reflect(
     app_state: &mut TuiAppState, engine: &mut ShadowEngine,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<()> {
-    let (current_mind, logs_json) = gather_reflect_input(&engine.db)?;
+    let (current_mind, logs_json) = gather_reflect_input(&engine.db, &engine.paths)?;
     let llm_client = Arc::clone(&engine.llm_client);
+    let mind_path = engine.paths.clone();
     app_state.stream_start = Some(Instant::now());
     tokio::spawn(async move {
-        match reflect_with_input(&llm_client, current_mind, logs_json).await {
+        match reflect_with_input(&llm_client, current_mind, logs_json, &mind_path ).await {
             Ok(new_mind) => {
                 let _ = reflect_tx.send(new_mind);
             }
@@ -263,7 +263,7 @@ fn handle_action_rename(
 }
 
 fn handle_action_memory(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
-    let path = mind_path();
+    let path = engine.paths.mind.clone();
     let expanded = false;
     match read_to_string(&path) {
         Ok(raw) => match from_str::<serde_json::Value>(&raw) {
@@ -272,7 +272,7 @@ fn handle_action_memory(app_state: &mut TuiAppState, engine: &mut ShadowEngine) 
                 let msg_idx = engine.messages.len();
                 engine.messages.push(Message::memory_tree(tree));
                 app_state.memory_focus = Some(msg_idx);
-                app_state.memory_source_path = Some(path.clone());
+                app_state.memory_source_path = Some(path);
                 app_state.memory_edit_mode = false;
                 app_state.memory_edit_buffer.clear();
                 app_state.memory_edit_path = None;
