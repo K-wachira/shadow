@@ -2,6 +2,7 @@ use crate::db::Database;
 use crate::llm::LlmClient;
 use crate::mind::mind_model::Meta;
 use crate::mind::mind_model::ShadowMind;
+use crate::setup::ShadowPaths;
 use crate::utils::format_timestamp;
 use chrono::Utc;
 use color_eyre::Result;
@@ -9,7 +10,6 @@ use serde_json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use crate::setup::ShadowPaths;
 
 const LOG_LIMIT: i32 = 30;
 
@@ -23,7 +23,7 @@ pub fn gather_reflect_input(db: &Arc<Database>, paths: &ShadowPaths) -> Result<(
 
 // spawnable — no db access
 pub async fn reflect_with_input(
-    llm_client: &Arc<LlmClient>, current_mind: String, logs_json: String, paths: &ShadowPaths
+    llm_client: &Arc<LlmClient>, current_mind: String, logs_json: String, paths: &ShadowPaths,
 ) -> Result<ShadowMind> {
     let skill = std::fs::read_to_string(&paths.mind_skill)?;
 
@@ -43,8 +43,7 @@ pub async fn reflect_with_input(
     Ok(new_mind)
 }
 
-
-pub fn load( mind_path: &PathBuf) -> Result<ShadowMind> {
+pub fn load(mind_path: &PathBuf) -> Result<ShadowMind> {
     if !mind_path.exists() {
         return Ok(init());
     }

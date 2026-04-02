@@ -11,11 +11,11 @@ use crate::mind::ShadowMind;
 use crate::model::AssistantState;
 use crate::model::Message;
 use crate::model::MessageKind;
+use crate::setup::ShadowPaths;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
-use crate::setup::ShadowPaths;
 
 pub struct ShadowEngine {
     pub db: Arc<Database>,
@@ -30,7 +30,9 @@ pub struct ShadowEngine {
 }
 
 impl ShadowEngine {
-    pub fn new(db: Arc<Database>, llm_client: Arc<LlmClient>, config: Config, paths: ShadowPaths) -> color_eyre::Result<Self> {
+    pub fn new(
+        db: Arc<Database>, llm_client: Arc<LlmClient>, config: Config, paths: ShadowPaths,
+    ) -> color_eyre::Result<Self> {
         let mind = mind::load(&paths.mind)?;
         Ok(Self {
             db,
@@ -73,7 +75,7 @@ impl ShadowEngine {
             .insert_message(self.session_id, "user", prompt, None)?;
         self.assistant_state = AssistantState::Thinking { secs: 0 };
 
-        let enriched = ask(&prompt.to_string(), &self.db, &self.messages,  &self.paths)
+        let enriched = ask(&prompt.to_string(), &self.db, &self.messages, &self.paths)
             .map_err(|e| color_eyre::eyre::eyre!(e))?;
         let llm_client = Arc::clone(&self.llm_client);
 

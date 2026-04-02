@@ -1,3 +1,4 @@
+use crate::config::Backend;
 use futures::Stream;
 use mistralrs::ChatCompletionChunkResponse;
 use mistralrs::ChunkChoice;
@@ -11,7 +12,6 @@ use ollama_rs::generation::completion::request::GenerationRequest;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio_stream::StreamExt;
-use crate::config::Backend;
 
 pub type LlmStream = Pin<Box<dyn Stream<Item = String> + Send>>;
 
@@ -51,9 +51,7 @@ impl LlmClient {
                 .map_err(|e| color_eyre::eyre::eyre!(e))?;
                 Ok(LlmProvider::MistralRs(Arc::new(model)))
             }
-            Backend::Unknown => {
-                Err(color_eyre::eyre::eyre!("Unknown provider: {:?}", provider))
-            },
+            Backend::Unknown => Err(color_eyre::eyre::eyre!("Unknown provider: {:?}", provider)),
         }
     }
 

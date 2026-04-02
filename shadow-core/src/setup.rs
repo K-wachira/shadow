@@ -1,6 +1,6 @@
+use crate::config::Config;
 use std::fs;
 use std::path::PathBuf;
-use crate::config::Config;
 
 #[derive(Clone)]
 pub struct ShadowPaths {
@@ -26,7 +26,6 @@ impl ShadowPaths {
 }
 
 pub fn run_setup() -> color_eyre::Result<(Config, ShadowPaths)> {
-    
     let paths = ShadowPaths::new();
     fs::create_dir_all(paths.db.parent().unwrap())?;
     fs::create_dir_all(paths.mind.parent().unwrap())?;
@@ -37,7 +36,6 @@ pub fn run_setup() -> color_eyre::Result<(Config, ShadowPaths)> {
     }
 
     let config: Config = toml::from_str(&fs::read_to_string(&paths.config)?)?;
-
 
     if !paths.mind.exists() {
         fs::write(&paths.mind, "{\n  // shadow.mind\n}")?;
