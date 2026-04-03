@@ -1,6 +1,8 @@
 use crate::tui::TuiAppState;
 use crate::tui::ensure_memory_cursor_visible;
 use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
+use crossterm::event::KeyModifiers;
 use json5::from_str;
 use shadow_core::engine::ShadowEngine;
 use shadow_core::model::Message;
@@ -12,7 +14,7 @@ use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 
 pub async fn handle_key_normal(
-    key: KeyCode, app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
+    key: KeyEvent, app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
     tx: mpsc::UnboundedSender<String>, done_tx: mpsc::UnboundedSender<()>,
 ) -> color_eyre::Result<bool> {
     if let Some(focus_idx) = app_state.memory_focus {
@@ -25,7 +27,7 @@ pub async fn handle_key_normal(
         }) = engine.messages.get_mut(focus_idx)
         {
             if app_state.memory_edit_mode {
-                match key {
+                match key.code {
                     KeyCode::Esc => {
                         app_state.memory_edit_mode = false;
                         app_state.memory_edit_buffer.clear();
@@ -80,7 +82,7 @@ pub async fn handle_key_normal(
                 return Ok(false);
             }
 
-            match key {
+            match key.code {
                 KeyCode::Esc => {
                     app_state.memory_focus = None;
                     app_state.memory_edit_mode = false;
@@ -137,8 +139,13 @@ pub async fn handle_key_normal(
         return Ok(false);
     }
 
-    match key {
+    match key.code {
         KeyCode::Enter => {
+            if key.modifiers.contains(KeyModifiers::SHIFT) && !app_state.rename_mode {
+                input_buf.push('\n');
+                return Ok(false);
+            }
+
             let prompt = input_buf.trim().to_string();
             if prompt.is_empty() {
                 return Ok(false);

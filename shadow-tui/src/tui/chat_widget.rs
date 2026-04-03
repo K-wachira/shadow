@@ -1,6 +1,7 @@
 use crate::tui::SLASH_COMMANDS;
 use crate::tui::TuiAppState;
 use crate::tui::bright_bold;
+use crate::tui::composer_height;
 use crate::tui::default;
 use crate::tui::dim;
 use crate::tui::error_style;
@@ -328,6 +329,7 @@ fn chat_area(total_area: Rect, tui_state: &TuiAppState) -> Rect {
     } else {
         1
     };
+    let composer_height = composer_height(total_area.height, total_area.width, tui_state);
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -335,7 +337,7 @@ fn chat_area(total_area: Rect, tui_state: &TuiAppState) -> Rect {
             Constraint::Min(0),
             Constraint::Length(1),
             Constraint::Length(1),
-            Constraint::Length(1),
+            Constraint::Length(composer_height),
             Constraint::Length(bottom_height),
         ])
         .split(total_area);

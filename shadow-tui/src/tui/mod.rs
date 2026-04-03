@@ -26,6 +26,7 @@ pub use color::hex_color;
 pub use color::muted;
 pub use color::selected_item_style;
 pub use color::very_dim;
+pub use input_widget::composer_height;
 pub use input_widget::render_input;
 pub use json_inspector::tree_cursor_screen_row;
 pub use json_inspector::tree_render_height;

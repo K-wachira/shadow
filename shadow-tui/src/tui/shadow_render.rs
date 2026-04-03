@@ -1,4 +1,5 @@
 use crate::tui::TuiAppState;
+use crate::tui::composer_height;
 use crate::tui::render_bottom_pane;
 use crate::tui::render_chat;
 use crate::tui::render_input;
@@ -24,7 +25,7 @@ pub fn render(f: &mut Frame, tui_state: &TuiAppState, shadow_engine: &mut Shadow
     //  ├──────────────────────────────────┤
     //  │  yolo hint    (1 row)            │  right-aligned
     //  ├──────────────────────────────────┤
-    //  │  input        (1 row)            │  "> █ Type your message…"
+    //  │  input        (wraps as needed)  │  "> █ Type your message…"
     //  ├──────────────────────────────────┤
     //  │  statusbar    (1 row)            │  "~ [session]   model $0.00 99%"
     //  └──────────────────────────────────┘
@@ -34,6 +35,7 @@ pub fn render(f: &mut Frame, tui_state: &TuiAppState, shadow_engine: &mut Shadow
     } else {
         1
     };
+    let input_height = composer_height(f.area().height, f.area().width, tui_state);
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -41,7 +43,7 @@ pub fn render(f: &mut Frame, tui_state: &TuiAppState, shadow_engine: &mut Shadow
             Constraint::Min(0),
             Constraint::Length(1),
             Constraint::Length(1),
-            Constraint::Length(1),
+            Constraint::Length(input_height),
             Constraint::Length(bottom_height),
         ])
         .split(f.area());

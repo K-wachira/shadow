@@ -86,7 +86,7 @@ pub async fn run(
                     handle_key_history(key.code, &mut app_state, shadow_engine)?
                 } else {
                     handle_key_normal(
-                        key.code,
+                        key,
                         &mut app_state,
                         shadow_engine,
                         &mut input_buf,

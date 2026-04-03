@@ -268,7 +268,7 @@ fn handle_action_rename(
 
 fn handle_action_memory(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
     let path = engine.paths.mind.clone();
-    let expanded = false;
+    let expanded = true;
     match read_to_string(&path) {
         Ok(raw) => match from_str::<serde_json::Value>(&raw) {
             Ok(value) => {
