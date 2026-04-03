@@ -3,15 +3,16 @@ use futures::Stream;
 use mistralrs::ChatCompletionChunkResponse;
 use mistralrs::ChunkChoice;
 use mistralrs::Delta;
-use mistralrs::GgufModelBuilder;
 use mistralrs::Response;
-use mistralrs::TextMessageRole;
-use mistralrs::TextMessages;
+use mistralrs::MultimodalMessages;
 use ollama_rs::Ollama;
 use ollama_rs::generation::completion::request::GenerationRequest;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio_stream::StreamExt;
+use mistralrs::UqffMultimodalModelBuilder;
+use std::path::PathBuf;
+use mistralrs::TextMessageRole;
 
 pub type LlmStream = Pin<Box<dyn Stream<Item = String> + Send>>;
 
@@ -41,14 +42,16 @@ impl LlmClient {
                 Ok(LlmProvider::Ollama(ollama))
             }
             Backend::MistralRs => {
-                let model = GgufModelBuilder::new(
-                    "bartowski/Qwen2.5-3B-Instruct-GGUF",
-                    vec!["Qwen2.5-3B-Instruct-Q4_K_M.gguf".to_string()],
+                let model = UqffMultimodalModelBuilder::new(
+                    "mistralrs-community/gemma-4-E2B-it-UQFF",
+                    vec![PathBuf::from("q4k-0.uqff")],
                 )
+                .into_inner()
                 .with_logging()
                 .build()
                 .await
                 .map_err(|e| color_eyre::eyre::eyre!(e))?;
+              
                 Ok(LlmProvider::MistralRs(Arc::new(model)))
             }
             Backend::Unknown => Err(color_eyre::eyre::eyre!("Unknown provider: {:?}", provider)),
@@ -80,7 +83,7 @@ impl LlmClient {
     pub async fn mistralrs_ask(
         &self, model: Arc<mistralrs::Model>, prompt: &str,
     ) -> color_eyre::Result<String> {
-        let messages = TextMessages::new().add_message(TextMessageRole::User, prompt);
+        let messages = MultimodalMessages::new().add_message(TextMessageRole::User, prompt);
         let res = model
             .send_chat_request(messages)
             .await
@@ -98,7 +101,7 @@ impl LlmClient {
     pub async fn mistralrs_ask_stream(
         &self, model: Arc<mistralrs::Model>, prompt: &str,
     ) -> color_eyre::Result<LlmStream> {
-        let messages = TextMessages::new()
+        let messages = MultimodalMessages::new()
             .add_message(TextMessageRole::User, prompt)
             .enable_thinking(true);
 
