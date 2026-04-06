@@ -87,6 +87,10 @@ pub enum AssistantState {
     Reflecting {
         secs: u64,
     },
+    
+    Ingesting {
+        secs: u64,
+    }
 }
 
 impl AssistantState {
@@ -112,6 +116,9 @@ impl AssistantState {
             }
             AssistantState::Reflecting { secs } => {
                 Some(format!("Reflecting…  (esc to cancel, {}s)", secs))
+            }
+            AssistantState::Ingesting { secs } => {
+                Some(format!("Ingesting…  (esc to cancel, {}s)", secs))
             }
         }
     }
