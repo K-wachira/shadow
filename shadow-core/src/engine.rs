@@ -168,7 +168,6 @@ impl ShadowEngine {
 
     pub fn ingest_icloud_logs(&self) -> color_eyre::Result<Vec<EntryLog>> {
         let logs = file_ingest(&self.db, &self.config.ingest.source_path)?;
-        eprintln!("ingest complete");
         Ok(logs)
     }
 

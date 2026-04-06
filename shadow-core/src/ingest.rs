@@ -16,15 +16,19 @@ pub fn process_json_file(log_name: &String, dir: &PathBuf) -> Result<RawLog, Str
     Ok(raw)
 }
 
-pub fn file_ingest(conn: &Database, dir: &PathBuf) -> color_eyre::Result<Vec<EntryLog>> {
+pub fn file_ingest(conn: &Database, path: &PathBuf) -> color_eyre::Result<Vec<EntryLog>> {
     let mut ingested = vec![];
-    match get_files(&dir) {
+    let expanded_path = dirs::home_dir()
+        .map(|h| PathBuf::from(path.to_string_lossy()
+        .replacen("~", &h.to_string_lossy(), 1)))
+        .unwrap_or_else(|| path.clone());
+    match get_files(&expanded_path) {
         Ok(files) => {
             for file_name in files {
                 if !*&file_name.contains(&".json".to_string()) || file_name.starts_with(".") {
                     continue;
                 };
-                if let Ok(Some(log)) = conn.insert_file_ingest(&file_name, dir) {
+                if let Ok(Some(log)) = conn.insert_file_ingest(&file_name, &expanded_path) {
                     ingested.push(log);
                 }
             }
