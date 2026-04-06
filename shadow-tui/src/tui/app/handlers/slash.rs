@@ -20,6 +20,7 @@ use std::fs::read_to_string;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::mpsc;
+use crate::tui::tui_models::ActiveOperation;
 
 #[derive(Clone, Copy)]
 enum SlashAction {
@@ -162,7 +163,7 @@ async fn run_action(
         SlashAction::New => handle_action_new(app_state, engine),
         SlashAction::Delete => handle_action_delete(engine)?,
         SlashAction::History => handle_action_history(app_state, engine),
-        SlashAction::Ingest => handle_action_ingest(engine),
+        SlashAction::Ingest => handle_action_ingest(app_state, engine),
         SlashAction::Reflect => handle_action_reflect(app_state, engine, reflect_tx).await?,
         SlashAction::Rename => handle_action_rename(app_state, engine, input_buf),
         SlashAction::Memory => handle_action_memory(app_state, engine),

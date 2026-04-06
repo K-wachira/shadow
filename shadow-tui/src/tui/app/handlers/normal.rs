@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
+use crate::tui::tui_models::ActiveOperation;
 
 pub async fn handle_key_normal(
     key: KeyEvent, app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
@@ -166,7 +167,7 @@ pub async fn handle_key_normal(
 
             match engine.send_message(&prompt).await {
                 Ok(stream) => {
-                    app_state.stream_start = Some(Instant::now());
+                    app_state.active_op = ActiveOperation::Streaming(Instant::now());
                     let mut stream = Box::pin(stream);
                     tokio::spawn(async move {
                         while let Some(chunk) = stream.next().await {

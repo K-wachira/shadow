@@ -5,6 +5,7 @@ use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::TryRecvError;
+use crate::tui::tui_models::ActiveOperation;
 
 pub async fn process_channels(
     rx: &mut mpsc::UnboundedReceiver<String>, done_rx: &mut mpsc::UnboundedReceiver<()>,
@@ -37,11 +38,11 @@ pub async fn process_channels(
             {
                 engine.on_stream_complete(&text.clone(), title_tx).await?;
             }
-            app_state.stream_start = None;
+            app_state.active_op = ActiveOperation::Idle;
         }
         Err(TryRecvError::Disconnected) => {
             eprintln!("stream task disconnected unexpectedly");
-            app_state.stream_start = None;
+            app_state.active_op = ActiveOperation::Idle;
         }
         Err(TryRecvError::Empty) => {}
     }
@@ -60,10 +61,10 @@ pub async fn process_channels(
     match reflect_rx.try_recv() {
         Ok(new_mind) => {
             engine.mind = new_mind;
-            app_state.background_op_start = None;
+            app_state.active_op = ActiveOperation::Idle;
         }
         Err(TryRecvError::Disconnected) => {
-            app_state.background_op_start = None;
+            app_state.active_op = ActiveOperation::Idle;
             eprintln!("reflect task disconnected unexpectedly");
         }
         Err(TryRecvError::Empty) => {}

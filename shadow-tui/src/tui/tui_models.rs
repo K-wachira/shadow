@@ -9,6 +9,14 @@ pub enum PendingConfirmAction {
     ReflectMind,
 }
 
+#[derive(Debug)]
+pub enum ActiveOperation {
+    Idle,
+    Streaming(Instant),
+    Reflecting(Instant),
+    Ingesting(Instant),
+}
+
 #[derive(Debug, Clone)]
 pub struct PendingConfirm {
     pub action: PendingConfirmAction,
@@ -29,6 +37,7 @@ pub struct TuiAppState {
     pub persisted_chat_width: u16,
     /// Monotonic tick counter — increment on each terminal tick event (~100ms)
     pub tick: u64,
+    pub active_op: ActiveOperation,
 
     pub slash_mode: bool,    // typing a slash command
     pub slash_input: String, // what's been typed after "/"
@@ -37,8 +46,6 @@ pub struct TuiAppState {
     pub history_cursor: usize,
     pub slash_cursor: usize,
     pub last_tick: Instant,
-    pub stream_start: Option<Instant>,
-    pub background_op_start: Option<Instant>,
     pub memory_focus: Option<usize>,
     pub memory_edit_mode: bool,
     pub memory_edit_buffer: String,
@@ -53,7 +60,7 @@ impl Default for TuiAppState {
             input: String::new(),
             memory_focus: None,
             assistant_state: AssistantState::Idle,
-
+            active_op: ActiveOperation::Idle,
             cursor_pos: 0,
             scroll_offset: 0,
             auto_scroll: true,
@@ -71,8 +78,6 @@ impl Default for TuiAppState {
             slash_cursor: 0,
 
             last_tick: Instant::now(),
-            stream_start: None,
-            background_op_start: None,
             memory_edit_mode: false,
             memory_edit_buffer: String::new(),
             memory_edit_path: None,
