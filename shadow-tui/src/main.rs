@@ -30,7 +30,7 @@ async fn cli_main() -> color_eyre::Result<()> {
     let db_conn = Arc::new(Database::init(&paths.db)?);
 
     let llm_client = Arc::new(
-        LlmClient::init(&config.core.provider, config.core.model.clone())
+        LlmClient::init(&config)
             .await
             .map_err(|e| color_eyre::eyre::eyre!(e))?,
     );
