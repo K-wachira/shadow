@@ -4,14 +4,16 @@ use std::path::PathBuf;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
-    pub core: CoreConfig,
+    pub llm_provider: CoreLLM,
     pub ollama: OllamaConfig,
+    #[serde(default)]
+    pub mistralrs: MistralRsConfig,
     pub reflection: ReflectionConfig,
     pub ingest: IngestConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct CoreConfig {
+pub struct CoreLLM {
     pub provider: Backend,
     pub model: String,
 }
@@ -30,6 +32,11 @@ pub struct OllamaConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct MistralRsConfig {
+    pub host: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ReflectionConfig {
     pub interval_minutes: u64,
     pub min_new_logs: usize,
@@ -43,12 +50,15 @@ pub struct IngestConfig {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            core: CoreConfig {
+            llm_provider: CoreLLM {
                 provider: Backend::Ollama,
                 model: "deepseek-r1:latest".to_string(),
             },
             ollama: OllamaConfig {
                 host: "http://localhost:11434".to_string(),
+            },
+            mistralrs: MistralRsConfig {
+                host: "http://localhost:1234".to_string(),
             },
             reflection: ReflectionConfig {
                 interval_minutes: 60,
@@ -59,6 +69,14 @@ impl Default for Config {
                     "~/Library/Mobile Documents/com~apple~CloudDocs/ShadowLogs/",
                 ),
             },
+        }
+    }
+}
+
+impl Default for MistralRsConfig {
+    fn default() -> Self {
+        Self {
+            host: "http://localhost:1234".to_string(),
         }
     }
 }
