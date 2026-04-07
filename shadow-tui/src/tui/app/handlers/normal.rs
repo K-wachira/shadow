@@ -40,13 +40,13 @@ pub async fn handle_key_normal(
                             match from_str::<serde_json::Value>(&app_state.memory_edit_buffer) {
                                 Ok(value) => value,
                                 Err(e) => {
-                                    eprintln!("invalid JSON value: {}", e);
+                                    tracing::error!("invalid JSON value: {}", e);
                                     return Ok(false);
                                 }
                             };
 
                         let Some(target_path) = app_state.memory_edit_path.clone() else {
-                            eprintln!("no selected memory row to edit");
+                            tracing::error!("no selected memory row to edit");
                             app_state.memory_edit_mode = false;
                             app_state.memory_edit_buffer.clear();
                             return Ok(false);
@@ -54,7 +54,7 @@ pub async fn handle_key_normal(
 
                         let tree_before = tree.clone();
                         if !tree.set_value_at_path(&target_path, &parsed) {
-                            eprintln!("failed to update selected value");
+                            tracing::error!("failed to update selected value");
                             return Ok(false);
                         }
 
@@ -62,11 +62,11 @@ pub async fn handle_key_normal(
                             let value = tree.to_value();
                             if let Err(e) = persist_json_value(&path, &value) {
                                 *tree = tree_before;
-                                eprintln!("failed to write shadow.mind: {}", e);
+                                tracing::error!("failed to write shadow.mind: {}", e);
                                 return Ok(false);
                             }
                         } else {
-                            eprintln!("missing source path for memory file");
+                            tracing::error!("missing source path for memory file");
                         }
 
                         app_state.memory_edit_mode = false;
@@ -119,13 +119,13 @@ pub async fn handle_key_normal(
                             app_state.memory_edit_path = Some(path);
                             app_state.memory_edit_buffer = current;
                         } else {
-                            eprintln!("select a leaf value to edit");
+                            tracing::info!("select a leaf value to edit");
                         }
                     }
                 }
                 KeyCode::Char('y') => {
                     if let Some(val) = tree.selected_value() {
-                        eprintln!("copied: {}", val);
+                        tracing::debug!("copied: {}", val);
                     }
                 }
                 _ => {}
@@ -163,7 +163,7 @@ pub async fn handle_key_normal(
                         engine.session_name = input_buf.clone();
                     }
                     Err(e) => {
-                        eprintln!("Error on title rename: {}", e);
+                        tracing::error!("Error on title rename: {}", e);
                     }
                 }
                 input_buf.clear();
@@ -195,7 +195,7 @@ pub async fn handle_key_normal(
                         let _ = done_tx.send(());  // fires on both completion and cancellation
                     });
                 }
-                Err(_) => {}
+                Err(e) => tracing::error!("send_message error: {}", e),
             }
         }
         KeyCode::Backspace => {

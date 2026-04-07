@@ -290,8 +290,8 @@ fn handle_action_memory(app_state: &mut TuiAppState, engine: &mut ShadowEngine) 
                 app_state.memory_edit_path = None;
                 let _ = ensure_memory_cursor_visible(app_state, engine);
             }
-            Err(e) => eprintln!("failed to parse shadow.mind: {}", e),
+            Err(e) => tracing::error!("failed to parse shadow.mind: {}", e),
         },
-        Err(e) => eprintln!("failed to read shadow.mind: {}", e),
+        Err(e) => tracing::error!("failed to read shadow.mind: {}", e),
     }
 }

@@ -41,7 +41,7 @@ pub async fn process_channels(
             app_state.active_op = ActiveOperation::Idle;
         }
         Err(TryRecvError::Disconnected) => {
-            eprintln!("stream task disconnected unexpectedly");
+            tracing::error!("stream task disconnected unexpectedly");
             app_state.active_op = ActiveOperation::Idle;
         }
         Err(TryRecvError::Empty) => {}
@@ -53,7 +53,7 @@ pub async fn process_channels(
             engine.db.update_session_title(engine.session_id, &title)?;
         }
         Err(TryRecvError::Disconnected) => {
-            eprintln!("title generation task disconnected unexpectedly");
+            tracing::error!("title generation task disconnected unexpectedly");
         }
         Err(TryRecvError::Empty) => {}
     }
@@ -65,7 +65,7 @@ pub async fn process_channels(
         }
         Err(TryRecvError::Disconnected) => {
             app_state.active_op = ActiveOperation::Idle;
-            eprintln!("reflect task disconnected unexpectedly");
+            tracing::error!("reflect task disconnected unexpectedly");
         }
         Err(TryRecvError::Empty) => {}
     }
