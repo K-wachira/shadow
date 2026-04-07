@@ -34,7 +34,7 @@ pub fn file_ingest(conn: &Database, path: &PathBuf) -> color_eyre::Result<Vec<En
             }
         }
         Err(e) => {
-            eprintln!("Log ingestion failed: {}", e);
+            tracing::error!("Log ingestion failed: {}", e);
         }
     }
     Ok(ingested)
