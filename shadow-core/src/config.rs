@@ -5,9 +5,6 @@ use std::path::PathBuf;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub llm_provider: CoreLLM,
-    pub ollama: OllamaConfig,
-    #[serde(default)]
-    pub mistralrs: MistralRsConfig,
     pub reflection: ReflectionConfig,
     pub ingest: IngestConfig,
 }
