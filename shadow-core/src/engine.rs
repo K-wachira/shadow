@@ -155,7 +155,7 @@ impl ShadowEngine {
                     let _ = title_tx.send(title.trim().to_string());
                 }
                 Err(e) => {
-                    eprintln!("Title generation failed: {}", e);
+                    tracing::error!("Title generation failed: {}", e);
                 }
             }
         });
