@@ -3,56 +3,43 @@ use crate::db::EntryLog;
 use crate::model::Message;
 use crate::model::MessageKind;
 use crate::setup::ShadowPaths;
+use crate::llm::ChatMessage;
+
 
 pub fn ask(
-    query: &String, conn: &Database, curr_content: &Vec<Message>, paths: &ShadowPaths,
-) -> color_eyre::Result<String> {
-    let log_limit = Some(100);
-    let results: String = match conn.get_logs(log_limit) {
-        //TODO get smart logs  not just recent
-        Ok(context) => build_prompt(
-            &format_logs(context),
-            &query,
-            build_current_history(curr_content)?,
-            paths,
-        )?,
-        Err(err) => err.to_string(),
-    };
-
-    Ok(results)
-}
-
-fn build_current_history(curr_messages: &Vec<Message>) -> color_eyre::Result<String> {
-    let mut history_blob = String::new();
-    for message in curr_messages {
-        match &message.kind {
-            MessageKind::UserInput { text } => {
-                history_blob.push_str(&format!("User: {}", &text));
-            }
-            MessageKind::AssistantText { text } => {
-                history_blob.push_str(&format!("Shadow: {}", &text));
-            }
-            _ => {
-                continue;
-            }
-        }
-    }
-    Ok(history_blob)
-}
-
-fn build_prompt(
-    context: &str, query: &str, history_blob: String, paths: &ShadowPaths,
-) -> color_eyre::Result<String> {
+    conn: &Database,
+    curr_content: &[Message],
+    paths: &ShadowPaths,
+) -> color_eyre::Result<Vec<ChatMessage>> {
+    let logs = conn.get_logs(Some(100)).unwrap_or_default();
+    let log_context = format_logs(logs);
     let mind = std::fs::read_to_string(&paths.mind)?;
 
-    Ok(format!(
-        "
-        You are Shadow, a personal assistant with access to the user's logs. 
-        Current shadow.mind :---\n{mind}\n\n
-        Current Chat Context :---\n {history_blob} \n\n\
-        Recent Logs :---\n{context}\n\n\
-        Current Question:--- {query}"
-    ))
+    let system = format!(
+        "You are Shadow, a personal assistant with access to the user's logs.\n\n\
+         Current shadow.mind:\n---\n{mind}\n---\n\n\
+         Recent Logs:\n---\n{log_context}\n---"
+    );
+
+    let mut messages = vec![
+        ChatMessage { role: "system".into(), content: system.clone() }
+    ];
+
+    // map conversation history
+    for msg in curr_content {
+        match &msg.kind {
+            MessageKind::UserInput { text } => messages.push(ChatMessage {
+                role: "user".into(),
+                content: text.clone(),
+            }),
+            MessageKind::AssistantText { text } => messages.push(ChatMessage {
+                role: "assistant".into(),
+                content: text.clone(),
+            }),
+            _ => {}
+        }
+    }
+    Ok(messages)
 }
 
 fn format_logs(logs: Vec<EntryLog>) -> String {

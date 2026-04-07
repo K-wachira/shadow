@@ -16,6 +16,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
+use crate::llm::ChatMessage;
 
 pub struct ShadowEngine {
     pub db: Arc<Database>,
@@ -75,19 +76,21 @@ impl ShadowEngine {
             .insert_message(self.session_id, "user", prompt, None)?;
         self.assistant_state = AssistantState::Thinking { secs: 0 };
 
-        let enriched = ask(&prompt.to_string(), &self.db, &self.messages, &self.paths)
+        let enriched = ask(&self.db, &self.messages, &self.paths)
             .map_err(|e| color_eyre::eyre::eyre!(e))?;
+        
         let llm_client = Arc::clone(&self.llm_client);
 
         let stream = async_stream::stream! {
-            if let Ok(s) = llm_client.llm_ask_stream(&enriched).await {
-                let mut s = s;
-                while let Some(chunk) = s.next().await {
-                    yield chunk;
+            match llm_client.llm_ask_stream(&enriched).await {
+                Ok(mut s) => {
+                    while let Some(chunk) = s.next().await {
+                        yield chunk;
+                    }
                 }
+                Err(e) => tracing::error!("llm_ask_stream error: {}", e),
             }
         };
-
         Ok(stream)
     }
 

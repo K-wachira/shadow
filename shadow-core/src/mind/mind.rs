@@ -26,13 +26,22 @@ pub async fn reflect_with_input(
     llm_client: &Arc<LlmClient>, current_mind: String, logs_json: String, paths: &ShadowPaths,
 ) -> Result<ShadowMind> {
     let skill = std::fs::read_to_string(&paths.mind_skill)?;
-
-    let prompt = format!(
-        "{skill}\n\n--- Current shadow.mind ---\n{current_mind}\n\n--- Recent Logs ---\n{logs_json}\n\n---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation.",
-    );
+    
+    let messages = vec![
+        ChatMessage {
+            role: "system".into(),
+            content: skill,
+        },
+        ChatMessage {
+            role: "user".into(),
+            content: format!(
+                "--- Current shadow.mind ---\n{current_mind}\n\n--- Recent Logs ---\n{logs_json}\n\n---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation."
+            ),
+        },
+    ];
 
     let response = llm_client
-        .llm_ask(&prompt)
+        .llm_ask(&messages)
         .await
         .map_err(|e| color_eyre::eyre::eyre!(e))?;
 
