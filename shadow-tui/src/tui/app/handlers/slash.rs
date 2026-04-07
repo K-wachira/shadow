@@ -233,7 +233,7 @@ fn handle_action_ingest(engine: &mut ShadowEngine) {
             );
             engine.messages.push(Message::tool(tool));
         }
-        Err(e) => eprintln!("ingest error: {}", e),
+        Err(e) => tracing::error!("ingest error: {}", e),
     }
 }
 
