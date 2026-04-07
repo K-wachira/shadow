@@ -10,6 +10,7 @@ use serde_json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use crate::llm::ChatMessage;
 
 const LOG_LIMIT: i32 = 30;
 
