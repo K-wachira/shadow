@@ -141,11 +141,16 @@ impl ShadowEngine {
             .join("\n");
 
         tokio::spawn(async move {
-            let prompt = format!(
-                "Generate a short session title (5 words max). Return only the title as plain text, nothing else.\n\n{}",
-                context
-            );
-            match llm_client.llm_ask(&prompt).await {
+            let messages = vec![
+                ChatMessage {
+                    role: "user".into(),
+                    content: format!(
+                        "Generate a short session title (5 words max). Return only the title as plain text, nothing else.\n\n{}",
+                        context
+                    ),
+                }
+            ];
+            match llm_client.llm_ask(&messages).await {
                 Ok(title) => {
                     let _ = title_tx.send(title.trim().to_string());
                 }
