@@ -1,154 +1,147 @@
-use crate::config::Backend;
+use reqwest::Client;
 use futures::Stream;
-use mistralrs::ChatCompletionChunkResponse;
-use mistralrs::ChunkChoice;
-use mistralrs::Delta;
-use mistralrs::Response;
-use mistralrs::MultimodalMessages;
-use ollama_rs::Ollama;
-use ollama_rs::generation::completion::request::GenerationRequest;
+use futures::StreamExt;
+use serde::Serialize;
+use serde::Deserialize;
 use std::pin::Pin;
-use std::sync::Arc;
-use tokio_stream::StreamExt;
-use mistralrs::UqffMultimodalModelBuilder;
-use std::path::PathBuf;
-use mistralrs::TextMessageRole;
+use crate::config::Config;
 
 pub type LlmStream = Pin<Box<dyn Stream<Item = String> + Send>>;
 
-pub enum LlmProvider {
-    Ollama(Ollama),
-    MistralRs(Arc<mistralrs::Model>),
+pub struct LlmClient {
+    pub client: Client,
+    pub base_url: String,
+    pub model_name: String,
+    pub api_key: String,
 }
 
-pub struct LlmClient {
-    pub provider: LlmProvider,
-    pub model_name: String,
+#[derive(Serialize, Clone)]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Serialize)]
+struct ChatRequest<'a> {
+    model: &'a str,
+    messages: &'a [ChatMessage],
+    stream: bool,
+}
+
+#[derive(Deserialize)]
+struct ChatResponse {
+    choices: Vec<ChatChoice>,
+}
+
+#[derive(Deserialize)]
+struct ChatChoice {
+    message: Option<ChatMessageResponse>,
+    delta: Option<ChatMessageResponse>,
+}
+
+#[derive(Deserialize)]
+struct ChatMessageResponse {
+    content: Option<String>,
 }
 
 impl LlmClient {
-    pub async fn init(provider: &Backend, model: String) -> color_eyre::Result<Self> {
-        let provider = Self::build_provider(provider).await?;
+    pub fn init(config: &Config) -> color_eyre::Result<Self> {
         Ok(Self {
-            provider: provider,
-            model_name: model,
+            client: Client::new(),
+            base_url: normalize_base_url(&config.llm_provider.base_url),
+            model_name: config.llm_provider.model_name.clone(),
+            api_key: config.llm_provider.api_key.clone(),
         })
     }
-
-    async fn build_provider(provider: &Backend) -> color_eyre::Result<LlmProvider> {
-        match provider {
-            Backend::Ollama => {
-                let ollama = Ollama::new("http://localhost".to_string(), 11434);
-                Ok(LlmProvider::Ollama(ollama))
-            }
-            Backend::MistralRs => {
-                let model = UqffMultimodalModelBuilder::new(
-                    "mistralrs-community/gemma-4-E2B-it-UQFF",
-                    vec![PathBuf::from("q4k-0.uqff")],
-                )
-                .into_inner()
-                .with_logging()
-                .build()
-                .await
-                .map_err(|e| color_eyre::eyre::eyre!(e))?;
-              
-                Ok(LlmProvider::MistralRs(Arc::new(model)))
-            }
-            Backend::Unknown => Err(color_eyre::eyre::eyre!("Unknown provider: {:?}", provider)),
-        }
+    fn chat_url(&self) -> String {
+        format!("{}/chat/completions", self.base_url)
     }
 
-    pub async fn llm_ask(&self, prompt: &str) -> color_eyre::Result<String> {
-        match &self.provider {
-            LlmProvider::Ollama(model) => {
-                self.ollama_ask(model, self.model_name.clone(), prompt)
-                    .await
-            }
-            LlmProvider::MistralRs(model) => self.mistralrs_ask(Arc::clone(model), prompt).await,
-        }
+    fn request_builder(&self) -> reqwest::RequestBuilder {
+        let builder = self.client.post(self.chat_url());
+        let key = if self.api_key.is_empty() || self.api_key == "None" {
+            "none".to_string()
+        } else {
+            self.api_key.clone()
+        };
+        builder.header("Authorization", format!("Bearer {}", key))
     }
 
-    pub async fn llm_ask_stream(&self, prompt: &str) -> color_eyre::Result<LlmStream> {
-        match &self.provider {
-            LlmProvider::Ollama(ollama) => {
-                self.ollama_ask_stream(ollama, self.model_name.clone(), prompt)
-                    .await
-            }
-            LlmProvider::MistralRs(model) => {
-                self.mistralrs_ask_stream(Arc::clone(model), prompt).await
-            }
-        }
-    }
+    pub async fn llm_ask(&self, messages: &[ChatMessage]) -> color_eyre::Result<String> {
+        let response = self
+            .request_builder()
+            .json(&ChatRequest { model: &self.model_name, messages, stream: false })
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<ChatResponse>()
+            .await?;
 
-    pub async fn mistralrs_ask(
-        &self, model: Arc<mistralrs::Model>, prompt: &str,
-    ) -> color_eyre::Result<String> {
-        let messages = MultimodalMessages::new().add_message(TextMessageRole::User, prompt);
-        let res = model
-            .send_chat_request(messages)
-            .await
-            .map_err(|e| color_eyre::eyre::eyre!(e))?;
-
-        let content = res
+        Ok(response
             .choices
             .first()
-            .and_then(|c| c.message.content.as_ref())
-            .cloned()
-            .unwrap_or_default();
-        Ok(content)
+            .and_then(|c| c.message.as_ref())
+            .and_then(|m| m.content.clone())
+            .unwrap_or_default())
     }
 
-    pub async fn mistralrs_ask_stream(
-        &self, model: Arc<mistralrs::Model>, prompt: &str,
-    ) -> color_eyre::Result<LlmStream> {
-        let messages = MultimodalMessages::new()
-            .add_message(TextMessageRole::User, prompt)
-            .enable_thinking(true);
+    pub async fn llm_ask_stream(&self, messages: &[ChatMessage]) -> color_eyre::Result<LlmStream> {
+        tracing::debug!(">>> sending to {}", self.chat_url());
+        let mut byte_stream = self
+            .request_builder()
+            .json(&ChatRequest { model: &self.model_name, messages, stream: true })
+            .send()
+            .await?
+            .error_for_status()?
+            .bytes_stream();
+        
+        tracing::debug!(">>> sent to {}", self.chat_url());
+        let stream = async_stream::stream! {
+            let mut pending = String::new();
+            let mut seen_visible = false;
 
-        let mapped = async_stream::stream! {
-            let model = model; // move Arc into stream block
-            if let Ok(mut stream) = model.stream_chat_request(messages).await {
-                while let Some(chunk) = stream.next().await {
-                    if let Response::Chunk(ChatCompletionChunkResponse { choices, .. }) = chunk {
-                        if let Some(ChunkChoice {
-                            delta: Delta { content: Some(content), .. }, ..
-                        }) = choices.first() {
-                            yield content.clone();
+            while let Some(Ok(chunk)) = byte_stream.next().await {
+                pending.push_str(&String::from_utf8_lossy(&chunk));
+                pending = pending.replace("\r\n", "\n").replace('\r', "\n");
+
+                while let Some(boundary) = pending.find("\n\n") {
+                    let event = pending[..boundary].to_string();
+                    pending.drain(..boundary + 2);
+
+                    let data = event
+                        .lines()
+                        .filter_map(|l| l.strip_prefix("data:"))
+                        .map(str::trim)
+                        .collect::<Vec<_>>()
+                        .join("\n");
+
+                    if data.is_empty() || data == "[DONE]" { continue; }
+
+                    if let Ok(chunk) = serde_json::from_str::<ChatResponse>(&data) {
+                        if let Some(content) = chunk.choices.first()
+                            .and_then(|c| c.delta.as_ref())
+                            .and_then(|d| d.content.clone())
+                        {
+                            if content.is_empty() { continue; }
+                            if !seen_visible && content.trim().is_empty() { continue; }
+                            if content.chars().any(|c| !c.is_whitespace()) {
+                                seen_visible = true;
+                            }
+                            yield content;
                         }
                     }
                 }
             }
         };
-        Ok(Box::pin(mapped))
+        Ok(Box::pin(stream))
     }
+}
 
-    pub async fn ollama_ask(
-        &self, ollama: &Ollama, model: String, prompt: &str,
-    ) -> color_eyre::Result<String> {
-        let res = ollama
-            .generate(GenerationRequest::new(model, prompt))
-            .await
-            .map_err(|e| color_eyre::eyre::eyre!(e))?;
-        Ok(res.response)
-    }
-
-    pub async fn ollama_ask_stream(
-        &self, ollama: &Ollama, model: String, prompt: &str,
-    ) -> color_eyre::Result<LlmStream> {
-        let stream = ollama
-            .generate_stream(GenerationRequest::new(model, prompt.to_string()))
-            .await
-            .map_err(|e| color_eyre::eyre::eyre!(e))?;
-
-        let mapped = stream.map(|chunk| match chunk {
-            Ok(responses) => responses
-                .into_iter()
-                .map(|r| r.response)
-                .collect::<Vec<String>>()
-                .join(""),
-            Err(_) => String::new(),
-        });
-
-        Ok(Box::pin(mapped))
+fn normalize_base_url(url: &str) -> String {
+    let trimmed = url.trim_end_matches('/');
+    if trimmed.ends_with("/v1") {
+        trimmed.to_string()
+    } else {
+        format!("{trimmed}/v1")
     }
 }
