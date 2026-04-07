@@ -29,7 +29,7 @@ pub async fn run(
     mut terminal: DefaultTerminal, shadow_engine: &mut ShadowEngine,
 ) -> color_eyre::Result<()> {
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
-    let (done_tx, mut done_rx) = mpsc::unbounded_channel::<()>();
+    let (done_tx, mut done_streaming_rx) = mpsc::unbounded_channel::<()>();
     let (title_tx, mut title_rx) = mpsc::unbounded_channel::<String>();
     let (reflect_tx, mut reflect_rx) = mpsc::unbounded_channel::<ShadowMind>();
     let mut app_state = TuiAppState::default();
@@ -38,7 +38,7 @@ pub async fn run(
     loop {
         process_channels(
             &mut rx,
-            &mut done_rx,
+            &mut done_streaming_rx,
             &mut title_rx,
             &mut app_state,
             shadow_engine,

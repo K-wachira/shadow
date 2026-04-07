@@ -41,7 +41,7 @@ impl SlashAction {
             "/delete" => Self::Delete,
             "/new" => Self::New,
             "/ingest" => Self::Ingest,
-            "/refect" => Self::Reflect,
+            "/reflect" => Self::Reflect,
             "/rename" => Self::Rename,
             "/exit" => Self::Exit,
             "/history" => Self::History,

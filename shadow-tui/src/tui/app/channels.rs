@@ -8,7 +8,7 @@ use tokio::sync::mpsc::error::TryRecvError;
 use crate::tui::tui_models::ActiveOperation;
 
 pub async fn process_channels(
-    rx: &mut mpsc::UnboundedReceiver<String>, done_rx: &mut mpsc::UnboundedReceiver<()>,
+    rx: &mut mpsc::UnboundedReceiver<String>, done_streaming_rx: &mut mpsc::UnboundedReceiver<()>,
     title_rx: &mut mpsc::UnboundedReceiver<String>, app_state: &mut TuiAppState,
     engine: &mut ShadowEngine, title_tx: mpsc::UnboundedSender<String>,
     reflect_rx: &mut mpsc::UnboundedReceiver<ShadowMind>,
@@ -29,7 +29,7 @@ pub async fn process_channels(
         }
     }
 
-    match done_rx.try_recv() {
+    match done_streaming_rx.try_recv() {
         Ok(_) => {
             if let Some(Message {
                 kind: MessageKind::AssistantText { text },
