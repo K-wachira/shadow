@@ -11,7 +11,6 @@ use shadow_core::json_tree::JsonTree;
 use shadow_core::mind::ShadowMind;
 use shadow_core::mind::gather_reflect_input;
 use shadow_core::mind::reflect_with_input;
-use shadow_core::model::AssistantState;
 use shadow_core::model::Message;
 use shadow_core::model::ToolCall;
 use shadow_core::model::ToolPayload;
@@ -21,6 +20,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::mpsc;
 use crate::tui::tui_models::ActiveOperation;
+use tokio_util::sync::CancellationToken;
 
 #[derive(Clone, Copy)]
 enum SlashAction {
@@ -168,7 +168,7 @@ async fn run_action(
         SlashAction::Rename => handle_action_rename(app_state, engine, input_buf),
         SlashAction::Memory => handle_action_memory(app_state, engine),
         SlashAction::Exit => {
-            return Ok(matches!(engine.assistant_state, AssistantState::Idle));
+            return Ok(matches!(app_state.active_op, ActiveOperation::Idle));
         }
         SlashAction::Unknown => {}
     }
@@ -244,14 +244,21 @@ async fn handle_action_reflect(
     let (current_mind, logs_json) = gather_reflect_input(&engine.db, &engine.paths)?;
     let llm_client = Arc::clone(&engine.llm_client);
     let mind_path = engine.paths.clone();
-    app_state.background_op_start = Some(Instant::now());
+
+    let token = CancellationToken::new();
+    app_state.cancel_token = token.clone();
+    app_state.active_op = ActiveOperation::Reflecting(Instant::now());
+
     tokio::spawn(async move {
-        match reflect_with_input(&llm_client, current_mind, logs_json, &mind_path).await {
-            Ok(new_mind) => {
-                let _ = reflect_tx.send(new_mind);
+        tokio::select! {
+            result = reflect_with_input(&llm_client, current_mind, logs_json, &mind_path) => {
+                match result {
+                    Ok(new_mind) => { let _ = reflect_tx.send(new_mind); }
+                    Err(e) => tracing::error!("reflect error: {}", e),
+                }
             }
-            Err(e) => {
-                eprintln!("reflect error: {}", e);
+            _ = token.cancelled() => {
+                tracing::info!("reflection cancelled");
             }
         }
     });

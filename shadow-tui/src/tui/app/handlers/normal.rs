@@ -13,6 +13,7 @@ use std::time::Instant;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use crate::tui::tui_models::ActiveOperation;
+use tokio_util::sync::CancellationToken;
 
 pub async fn handle_key_normal(
     key: KeyEvent, app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
@@ -141,6 +142,11 @@ pub async fn handle_key_normal(
     }
 
     match key.code {
+        KeyCode::Esc => {
+            app_state.cancel_token.cancel();
+            app_state.active_op = ActiveOperation::Idle;
+        }
+        
         KeyCode::Enter => {
             if key.modifiers.contains(KeyModifiers::SHIFT) && !app_state.rename_mode {
                 input_buf.push('\n');
@@ -169,11 +175,24 @@ pub async fn handle_key_normal(
                 Ok(stream) => {
                     app_state.active_op = ActiveOperation::Streaming(Instant::now());
                     let mut stream = Box::pin(stream);
+                    let token = CancellationToken::new();
+                    app_state.cancel_token = token.clone();
                     tokio::spawn(async move {
-                        while let Some(chunk) = stream.next().await {
-                            let _ = tx.send(chunk);
+                        loop {
+                            tokio::select! {
+                                chunk = stream.next() => {
+                                    match chunk {
+                                        Some(chunk) => { let _ = tx.send(chunk); }
+                                        None => break,
+                                    }
+                                }
+                                _ = token.cancelled() => {
+                                    tracing::info!("stream cancelled");
+                                    break;
+                                }
+                            }
                         }
-                        let _ = done_tx.send(());
+                        let _ = done_tx.send(());  // fires on both completion and cancellation
                     });
                 }
                 Err(_) => {}

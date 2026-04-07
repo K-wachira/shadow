@@ -2,6 +2,7 @@ use shadow_core::db::Sessions;
 use shadow_core::model::AssistantState;
 use std::path::PathBuf;
 use std::time::Instant;
+use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PendingConfirmAction {
@@ -38,6 +39,7 @@ pub struct TuiAppState {
     /// Monotonic tick counter — increment on each terminal tick event (~100ms)
     pub tick: u64,
     pub active_op: ActiveOperation,
+    pub cancel_token: CancellationToken,
 
     pub slash_mode: bool,    // typing a slash command
     pub slash_input: String, // what's been typed after "/"
@@ -76,7 +78,7 @@ impl Default for TuiAppState {
             history_sessions: vec![],
             history_cursor: 0,
             slash_cursor: 0,
-
+            cancel_token: CancellationToken::new(),
             last_tick: Instant::now(),
             memory_edit_mode: false,
             memory_edit_buffer: String::new(),
