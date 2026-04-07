@@ -15,7 +15,9 @@ pub struct Config {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CoreLLM {
     pub provider: Backend,
-    pub model: String,
+    pub model_name: String, 
+    pub base_url: String,
+    pub api_key: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -52,13 +54,9 @@ impl Default for Config {
         Self {
             llm_provider: CoreLLM {
                 provider: Backend::Ollama,
-                model: "deepseek-r1:latest".to_string(),
-            },
-            ollama: OllamaConfig {
-                host: "http://localhost:11434".to_string(),
-            },
-            mistralrs: MistralRsConfig {
-                host: "http://localhost:1234".to_string(),
+                model_name: "deepseek-r1:latest".to_string(),
+                base_url : String::from("http://localhost:8080"),
+                api_key : String::from("mistral")
             },
             reflection: ReflectionConfig {
                 interval_minutes: 60,
