@@ -23,17 +23,20 @@ async fn main() -> color_eyre::Result<()> {
 
 async fn cli_main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    tracing_subscriber::fmt()
-        .with_writer(std::io::stderr)
-        .init();
     let (config, paths) = setup::run_setup()?;
+    
+    let log_file = std::fs::OpenOptions::new()
+        .append(true)
+        .open(&paths.log)?;
+    
+    tracing_subscriber::fmt()
+        .with_writer(log_file)
+        .with_max_level(tracing::Level::DEBUG)
+        .init(); 
+    
     let db_conn = Arc::new(Database::init(&paths.db)?);
 
-    let llm_client = Arc::new(
-        LlmClient::init(&config)
-            .await
-            .map_err(|e| color_eyre::eyre::eyre!(e))?,
-    );
+    let llm_client = Arc::new(LlmClient::init(&config)?);
 
     let mut shadow_engine = ShadowEngine::new(db_conn, llm_client, config, paths)?;
 
