@@ -13,7 +13,7 @@ use shadow_continuity::mind::ShadowMind;
 use shadow_core::model::Message;
 use shadow_core::model::ToolCall;
 use shadow_core::model::ToolPayload;
-use shadow_core::utils::format_timestamp;
+use shadow_utils::utils::format_timestamp;
 use std::fs::read_to_string;
 use std::sync::Arc;
 use std::time::Instant;

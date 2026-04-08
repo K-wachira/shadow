@@ -35,8 +35,8 @@ use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 use shadow_core::model::ToolCall;
 use shadow_core::model::ToolState;
-use shadow_core::utils::format_timestamp;
-use shadow_core::utils::truncate;
+use shadow_utils::utils::format_timestamp;
+use shadow_utils::utils::truncate;
 
 #[derive(Clone)]
 enum Segment {
