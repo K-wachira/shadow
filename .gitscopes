@@ -1,8 +1,10 @@
-core: session management
-config: Configs for running the app
+core: shadow core with db, mind and llm
+tui: terminal user interface
+services: suporting services like ingest.
+tools: tools for the llms
+continuity: shadow continuity
 engine: LLM inference & streaming
 mind: shadow mind core functionality
-tui: terminal user interface
-db: sqlite & data layer
-model: data models & structs
 llmclient: llm client & provider routing
+db: sqlite & data layer
+config: Configs for running the app
