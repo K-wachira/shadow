@@ -1,15 +1,12 @@
 use crate::db::Database;
 use crate::db::EntryLog;
+use crate::llm::ChatMessage;
 use crate::model::Message;
 use crate::model::MessageKind;
 use crate::setup::ShadowPaths;
-use crate::llm::ChatMessage;
-
 
 pub fn ask(
-    conn: &Database,
-    curr_content: &[Message],
-    paths: &ShadowPaths,
+    conn: &Database, curr_content: &[Message], paths: &ShadowPaths,
 ) -> color_eyre::Result<Vec<ChatMessage>> {
     let logs = conn.get_logs(Some(100)).unwrap_or_default();
     let log_context = format_logs(logs);
@@ -17,25 +14,24 @@ pub fn ask(
 
     let system = format!(
         "You are Shadow, a personal assistant with access to the user's logs.\n\n\
+         You may use tools for live weather, web search, and URL fetching when current or external information is needed.\n\n\
          Current shadow.mind:\n---\n{mind}\n---\n\n\
          Recent Logs:\n---\n{log_context}\n---"
     );
 
-    let mut messages = vec![
-        ChatMessage { role: "system".into(), content: system.clone() }
-    ];
+    let mut messages = vec![ChatMessage {
+        role: "system".into(),
+        content: system.clone(),
+        ..ChatMessage::default()
+    }];
 
     // map conversation history
     for msg in curr_content {
         match &msg.kind {
-            MessageKind::UserInput { text } => messages.push(ChatMessage {
-                role: "user".into(),
-                content: text.clone(),
-            }),
-            MessageKind::AssistantText { text } => messages.push(ChatMessage {
-                role: "assistant".into(),
-                content: text.clone(),
-            }),
+            MessageKind::UserInput { text } => messages.push(ChatMessage::user(text.clone())),
+            MessageKind::AssistantText { text } => {
+                messages.push(ChatMessage::assistant(text.clone()))
+            }
             _ => {}
         }
     }

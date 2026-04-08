@@ -5,6 +5,7 @@ use crate::db::EntryLog;
 use crate::db::SessionMessages;
 use crate::db::Sessions;
 use crate::ingest::file_ingest;
+use crate::llm::ChatMessage;
 use crate::llm::LlmClient;
 use crate::mind;
 use crate::mind::ShadowMind;
@@ -16,7 +17,6 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
-use crate::llm::ChatMessage;
 
 pub struct ShadowEngine {
     pub db: Arc<Database>,
@@ -76,13 +76,13 @@ impl ShadowEngine {
             .insert_message(self.session_id, "user", prompt, None)?;
         self.assistant_state = AssistantState::Thinking { secs: 0 };
 
-        let enriched = ask(&self.db, &self.messages, &self.paths)
-            .map_err(|e| color_eyre::eyre::eyre!(e))?;
-        
+        let enriched =
+            ask(&self.db, &self.messages, &self.paths).map_err(|e| color_eyre::eyre::eyre!(e))?;
+
         let llm_client = Arc::clone(&self.llm_client);
 
         let stream = async_stream::stream! {
-            match llm_client.llm_ask_stream(&enriched).await {
+            match llm_client.llm_ask_stream_with_tools(&enriched).await {
                 Ok(mut s) => {
                     while let Some(chunk) = s.next().await {
                         yield chunk;
@@ -141,15 +141,10 @@ impl ShadowEngine {
             .join("\n");
 
         tokio::spawn(async move {
-            let messages = vec![
-                ChatMessage {
-                    role: "user".into(),
-                    content: format!(
-                        "Generate a short session title (5 words max). Return only the title as plain text, nothing else.\n\n{}",
-                        context
-                    ),
-                }
-            ];
+            let messages = vec![ChatMessage::user(format!(
+                "Generate a short session title (5 words max). Return only the title as plain text, nothing else.\n\n{}",
+                context
+            ))];
             match llm_client.llm_ask(&messages).await {
                 Ok(title) => {
                     let _ = title_tx.send(title.trim().to_string());

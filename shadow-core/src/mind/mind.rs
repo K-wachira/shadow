@@ -1,4 +1,5 @@
 use crate::db::Database;
+use crate::llm::ChatMessage;
 use crate::llm::LlmClient;
 use crate::mind::mind_model::Meta;
 use crate::mind::mind_model::ShadowMind;
@@ -10,7 +11,6 @@ use serde_json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use crate::llm::ChatMessage;
 
 const LOG_LIMIT: i32 = 30;
 
@@ -27,18 +27,16 @@ pub async fn reflect_with_input(
     llm_client: &Arc<LlmClient>, current_mind: String, logs_json: String, paths: &ShadowPaths,
 ) -> Result<ShadowMind> {
     let skill = std::fs::read_to_string(&paths.mind_skill)?;
-    
+
     let messages = vec![
         ChatMessage {
             role: "system".into(),
             content: skill,
+            ..ChatMessage::default()
         },
-        ChatMessage {
-            role: "user".into(),
-            content: format!(
-                "--- Current shadow.mind ---\n{current_mind}\n\n--- Recent Logs ---\n{logs_json}\n\n---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation."
-            ),
-        },
+        ChatMessage::user(format!(
+            "--- Current shadow.mind ---\n{current_mind}\n\n--- Recent Logs ---\n{logs_json}\n\n---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation."
+        )),
     ];
 
     let response = llm_client
