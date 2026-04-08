@@ -3186,6 +3186,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "shadow-continuity"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "color-eyre",
+ "json5",
+ "serde",
+ "serde_json",
+ "shadow-utils",
+]
+
+[[package]]
 name = "shadow-core"
 version = "0.1.0"
 dependencies = [
@@ -3203,8 +3215,10 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "shadow-continuity",
  "shadow-services",
  "shadow-tools",
+ "shadow-utils",
  "termimad",
  "tokio",
  "tokio-stream",
@@ -3254,7 +3268,9 @@ dependencies = [
  "ratatui-textarea",
  "serde",
  "serde_json",
+ "shadow-continuity",
  "shadow-core",
+ "shadow-utils",
  "termimad",
  "tokio",
  "tokio-stream",
@@ -3262,6 +3278,13 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tui-markdown",
+]
+
+[[package]]
+name = "shadow-utils"
+version = "0.1.0"
+dependencies = [
+ "chrono",
 ]
 
 [[package]]
