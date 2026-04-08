@@ -87,10 +87,10 @@ pub enum AssistantState {
     Reflecting {
         secs: u64,
     },
-    
+
     Ingesting {
         secs: u64,
-    }
+    },
 }
 
 impl AssistantState {

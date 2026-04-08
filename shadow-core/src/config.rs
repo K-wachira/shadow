@@ -12,7 +12,7 @@ pub struct Config {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CoreLLM {
     pub provider: Backend,
-    pub model_name: String, 
+    pub model_name: String,
     pub base_url: String,
     pub api_key: String,
 }
@@ -52,8 +52,8 @@ impl Default for Config {
             llm_provider: CoreLLM {
                 provider: Backend::Ollama,
                 model_name: "deepseek-r1:latest".to_string(),
-                base_url : String::from("http://localhost:8080"),
-                api_key : String::from("mistral")
+                base_url: String::from("http://localhost:8080"),
+                api_key: String::from("mistral"),
             },
             reflection: ReflectionConfig {
                 interval_minutes: 60,

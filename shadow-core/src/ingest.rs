@@ -19,8 +19,12 @@ pub fn process_json_file(log_name: &String, dir: &PathBuf) -> Result<RawLog, Str
 pub fn file_ingest(conn: &Database, path: &PathBuf) -> color_eyre::Result<Vec<EntryLog>> {
     let mut ingested = vec![];
     let expanded_path = dirs::home_dir()
-        .map(|h| PathBuf::from(path.to_string_lossy()
-        .replacen("~", &h.to_string_lossy(), 1)))
+        .map(|h| {
+            PathBuf::from(
+                path.to_string_lossy()
+                    .replacen("~", &h.to_string_lossy(), 1),
+            )
+        })
         .unwrap_or_else(|| path.clone());
     match get_files(&expanded_path) {
         Ok(files) => {
