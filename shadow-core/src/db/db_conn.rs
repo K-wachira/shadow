@@ -10,6 +10,7 @@ use rusqlite::{Connection, Result, params};
 use std::path::PathBuf;
 use tracing::error;
 
+#[derive(Debug)]
 pub struct Database {
     conn: Connection,
 }

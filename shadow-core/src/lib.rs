@@ -5,7 +5,5 @@ pub mod db;
 pub mod engine;
 pub mod json_tree;
 pub mod llm;
-pub mod mind;
 pub mod model;
 pub mod setup;
-pub mod utils;

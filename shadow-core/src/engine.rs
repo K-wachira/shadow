@@ -7,8 +7,6 @@ use shadow_services::ingest::get_files;
 use shadow_services::models::EntryLog;
 use crate::llm::ChatMessage;
 use crate::llm::LlmClient;
-use crate::mind;
-use crate::mind::ShadowMind;
 use crate::model::AssistantState;
 use crate::model::Message;
 use crate::model::MessageKind;
@@ -18,6 +16,10 @@ use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
 use std::path::PathBuf;
+use shadow_continuity::mind::ShadowMind;
+use shadow_continuity::mind;
+
+const LOG_LIMIT: i32 = 30;
 
 pub struct ShadowEngine {
     pub db: Arc<Database>,
@@ -95,6 +97,73 @@ impl ShadowEngine {
         Ok(stream)
     }
 
+    pub async fn reflect(
+        llm_client: Arc<LlmClient>,
+        paths: ShadowPaths,
+        current_mind: ShadowMind,
+        logs_json: String,
+    ) -> color_eyre::Result<ShadowMind> {
+        let skill = std::fs::read_to_string(&paths.mind_skill)?;
+        eprint!("Reflecting");
+
+        let messages = vec![
+            ChatMessage {
+                role: "system".into(),
+                content: skill,
+                ..ChatMessage::default()
+            },
+            ChatMessage::user(format!(
+                "--- Current shadow.mind ---\n{current_mind:?}\n\n--- Recent Logs ---\n{logs_json}\n\n---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation."
+            )),
+        ];
+
+        let response = llm_client
+            .llm_ask(&messages)
+            .await
+            .map_err(|e| color_eyre::eyre::eyre!(e))?;
+
+        let new_mind: ShadowMind = json5::from_str(&response)
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to parse shadow.mind: {}", e))?;
+
+        mind::save(&new_mind, &paths.mind)?;
+        Ok(new_mind)
+    }
+    
+    // called from main thread — fetches logs before spawning
+    pub fn gather_reflect_input(&mut self) ->  color_eyre::Result<String> {
+        eprint!("Getting logss");
+        let logs = &self.db.get_logs(Some(LOG_LIMIT))?;
+        let logs_json = serde_json::to_string_pretty(&logs)?;
+        Ok(logs_json)
+    }
+    
+    // spawnable — no db access
+    pub async fn reflect_with_input( &mut self ) ->  color_eyre::Result<ShadowMind> {
+        let skill = std::fs::read_to_string(&self.paths.mind_skill)?;
+        let logs_json = &self.gather_reflect_input()?;
+        let messages = vec![
+            ChatMessage {
+                role: "system".into(),
+                content: skill,
+                ..ChatMessage::default()
+            },
+            ChatMessage::user(format!(
+                "--- Current shadow.mind ---\n{{&self.current_mind}}\n\n--- Recent Logs ---\n{logs_json}\n\n---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation."
+            )),
+        ];
+    
+        let response = &self.llm_client
+            .llm_ask(&messages)
+            .await
+            .map_err(|e| color_eyre::eyre::eyre!(e))?;
+    
+        let new_mind: ShadowMind = json5::from_str(&response)
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to parse shadow.mind: {}", e))?;
+    
+        mind::save(&new_mind, &self.paths.mind)?;
+        Ok(new_mind)
+    }
+    
     pub async fn on_stream_complete(
         &mut self, response: &str, title_tx: mpsc::UnboundedSender<String>,
     ) -> color_eyre::Result<()> {
