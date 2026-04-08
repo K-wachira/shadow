@@ -1,0 +1,8 @@
+core: session management
+config: Configs for running the app
+engine: LLM inference & streaming
+mind: shadow mind core functionality
+tui: terminal user interface
+db: sqlite & data layer
+model: data models & structs
+llmclient: llm client & provider routing
