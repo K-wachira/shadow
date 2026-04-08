@@ -1,7 +1,7 @@
 use crate::tui::TuiAppState;
 use crate::tui::tui_models::ActiveOperation;
 use shadow_core::engine::ShadowEngine;
-use shadow_core::mind::ShadowMind;
+use shadow_continuity::mind::ShadowMind;
 use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 use tokio::sync::mpsc;

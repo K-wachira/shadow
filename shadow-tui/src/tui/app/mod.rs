@@ -10,7 +10,7 @@ use crossterm::event::Event;
 use crossterm::event::{self};
 use ratatui::DefaultTerminal;
 use shadow_core::engine::ShadowEngine;
-use shadow_core::mind::ShadowMind;
+use shadow_continuity::mind::ShadowMind;
 use shadow_core::model::AssistantState;
 use std::time::Duration;
 use tokio::sync::mpsc;

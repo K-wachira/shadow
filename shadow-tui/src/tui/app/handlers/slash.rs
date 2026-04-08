@@ -23,6 +23,7 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Clone, Copy)]
+#[derive(Debug)]
 enum SlashAction {
     New,
     Delete,
@@ -239,12 +240,14 @@ fn handle_action_ingest(app_state: &mut TuiAppState, engine: &mut ShadowEngine) 
 }
 
 async fn handle_action_reflect(
-    app_state: &mut TuiAppState, engine: &mut ShadowEngine,
+    app_state: &mut TuiAppState,
+    engine: &mut ShadowEngine,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<()> {
-    let (current_mind, logs_json) = gather_reflect_input(&engine.db, &engine.paths)?;
+    let logs_json = engine.gather_reflect_input()?;
     let llm_client = Arc::clone(&engine.llm_client);
-    let mind_path = engine.paths.clone();
+    let paths = engine.paths.clone();
+    let current_mind = engine.mind.clone();
 
     let token = CancellationToken::new();
     app_state.cancel_token = token.clone();
@@ -252,7 +255,7 @@ async fn handle_action_reflect(
 
     tokio::spawn(async move {
         tokio::select! {
-            result = reflect_with_input(&llm_client, current_mind, logs_json, &mind_path) => {
+            result = ShadowEngine::reflect(llm_client, paths, current_mind, logs_json) => {
                 match result {
                     Ok(new_mind) => { let _ = reflect_tx.send(new_mind); }
                     Err(e) => tracing::error!("reflect error: {}", e),

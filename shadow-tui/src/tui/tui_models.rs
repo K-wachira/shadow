@@ -124,7 +124,7 @@ pub const SLASH_COMMANDS: &[SlashCommand] = &[
         description: "list past sessions",
     },
     SlashCommand {
-        name: "/refect",
+        name: "/reflect",
         description: "reflect ..",
     },
     SlashCommand {
