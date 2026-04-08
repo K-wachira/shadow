@@ -4,6 +4,7 @@ use crate::tui::SLASH_COMMANDS;
 use crate::tui::SlashCommand;
 use crate::tui::TuiAppState;
 use crate::tui::ensure_memory_cursor_visible;
+use crate::tui::tui_models::ActiveOperation;
 use crossterm::event::KeyCode;
 use json5::from_str;
 use shadow_core::engine::ShadowEngine;
@@ -19,7 +20,6 @@ use std::fs::read_to_string;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::mpsc;
-use crate::tui::tui_models::ActiveOperation;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Clone, Copy)]
@@ -220,11 +220,11 @@ fn handle_action_history(app_state: &mut TuiAppState, engine: &mut ShadowEngine)
     }
 }
 
-fn handle_action_ingest(engine: &mut ShadowEngine) {
+fn handle_action_ingest(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
+    app_state.active_op = ActiveOperation::Ingesting(Instant::now());
     match engine.ingest_icloud_logs() {
         Ok(logs) => {
             let mut tool = ToolCall::new("Ingest", "iCloud logs");
-            tool.finish(vec![format!("{} new logs ingested", logs.len())]);
             tool.payload = Some(ToolPayload::Logs(logs.clone()));
             tool.finish(
                 logs.iter()

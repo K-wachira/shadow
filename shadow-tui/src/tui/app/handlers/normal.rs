@@ -1,5 +1,6 @@
 use crate::tui::TuiAppState;
 use crate::tui::ensure_memory_cursor_visible;
+use crate::tui::tui_models::ActiveOperation;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyModifiers;
@@ -12,7 +13,6 @@ use std::path::PathBuf;
 use std::time::Instant;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
-use crate::tui::tui_models::ActiveOperation;
 use tokio_util::sync::CancellationToken;
 
 pub async fn handle_key_normal(
@@ -146,7 +146,7 @@ pub async fn handle_key_normal(
             app_state.cancel_token.cancel();
             app_state.active_op = ActiveOperation::Idle;
         }
-        
+
         KeyCode::Enter => {
             if key.modifiers.contains(KeyModifiers::SHIFT) && !app_state.rename_mode {
                 input_buf.push('\n');
@@ -192,7 +192,7 @@ pub async fn handle_key_normal(
                                 }
                             }
                         }
-                        let _ = done_tx.send(());  // fires on both completion and cancellation
+                        let _ = done_tx.send(()); // fires on both completion and cancellation
                     });
                 }
                 Err(e) => tracing::error!("send_message error: {}", e),

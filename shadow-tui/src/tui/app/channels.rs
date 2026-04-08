@@ -1,11 +1,11 @@
 use crate::tui::TuiAppState;
+use crate::tui::tui_models::ActiveOperation;
 use shadow_core::engine::ShadowEngine;
 use shadow_core::mind::ShadowMind;
 use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::TryRecvError;
-use crate::tui::tui_models::ActiveOperation;
 
 pub async fn process_channels(
     rx: &mut mpsc::UnboundedReceiver<String>, done_streaming_rx: &mut mpsc::UnboundedReceiver<()>,

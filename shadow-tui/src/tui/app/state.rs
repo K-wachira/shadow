@@ -1,8 +1,8 @@
 use crate::tui::TuiAppState;
+use crate::tui::tui_models::ActiveOperation;
 use shadow_core::model::AssistantState;
 use std::time::Duration;
 use std::time::Instant;
-use crate::tui::tui_models::ActiveOperation;
 
 pub fn sync_input_state(app_state: &mut TuiAppState, input_buf: &str) {
     if app_state.memory_edit_mode {
@@ -25,8 +25,14 @@ pub fn update_tick(app_state: &mut TuiAppState) {
 pub fn update_assistant_state(app_state: &mut TuiAppState) {
     app_state.assistant_state = match &app_state.active_op {
         ActiveOperation::Idle => AssistantState::Idle,
-        ActiveOperation::Streaming(start) => AssistantState::Thinking { secs: start.elapsed().as_secs() },
-        ActiveOperation::Reflecting(start) => AssistantState::Reflecting { secs: start.elapsed().as_secs() },
-        ActiveOperation::Ingesting(start) => AssistantState::Ingesting { secs: start.elapsed().as_secs() },
+        ActiveOperation::Streaming(start) => AssistantState::Thinking {
+            secs: start.elapsed().as_secs(),
+        },
+        ActiveOperation::Reflecting(start) => AssistantState::Reflecting {
+            secs: start.elapsed().as_secs(),
+        },
+        ActiveOperation::Ingesting(start) => AssistantState::Ingesting {
+            secs: start.elapsed().as_secs(),
+        },
     };
 }
