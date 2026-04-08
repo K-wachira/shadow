@@ -1,5 +1,7 @@
-use crate::db::{EntryLog, FileIngest, RawLog};
-use crate::ingest::process_json_file;
+use shadow_services::models::EntryLog;
+use shadow_services::models::RawLog;
+use shadow_services::models::FileIngest;
+use shadow_services::ingest::process_json_file;
 
 use crate::db::SessionMessages;
 use crate::db::Sessions;

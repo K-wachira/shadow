@@ -3203,11 +3203,24 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "shadow-services",
  "shadow-tools",
  "termimad",
  "tokio",
  "tokio-stream",
  "toml",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "shadow-services"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "dirs",
+ "serde",
+ "serde_json",
  "tracing",
  "tracing-subscriber",
 ]

@@ -91,6 +91,7 @@ impl ChatMessageResponse {
     }
 }
 
+#[allow(dead_code)]
 fn format_tool_output(output: &str) -> String {
     const MAX_CHARS: usize = 400;
     let mut truncated = output.chars().take(MAX_CHARS).collect::<String>();

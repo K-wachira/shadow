@@ -26,6 +26,7 @@ hotpath = "0.14"
 toml = "0.8"
 reqwest = { version = "0.12", features = ["json", "stream"] }
 shadow-tools = { path = "../shadow-tools" }
+shadow-services = { path = "../shadow-services" }
 
 [features]
 hotpath = ["hotpath/hotpath"]

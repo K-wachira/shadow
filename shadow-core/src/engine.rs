@@ -1,10 +1,10 @@
 use crate::ask::ask;
 use crate::config::Config;
 use crate::db::Database;
-use crate::db::EntryLog;
 use crate::db::SessionMessages;
 use crate::db::Sessions;
-use crate::ingest::file_ingest;
+use shadow_services::ingest::get_files;
+use shadow_services::models::EntryLog;
 use crate::llm::ChatMessage;
 use crate::llm::LlmClient;
 use crate::mind;
@@ -17,6 +17,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
+use std::path::PathBuf;
 
 pub struct ShadowEngine {
     pub db: Arc<Database>,
@@ -170,8 +171,31 @@ impl ShadowEngine {
     }
 
     pub fn ingest_icloud_logs(&self) -> color_eyre::Result<Vec<EntryLog>> {
-        let logs = file_ingest(&self.db, &self.config.ingest.source_path)?;
-        Ok(logs)
+        let mut ingested = vec![];
+        let expanded_path = dirs::home_dir()
+            .map(|h| {
+                PathBuf::from(
+                     &self.config.ingest.source_path.to_string_lossy()
+                        .replacen("~", &h.to_string_lossy(), 1),
+                )
+            })
+            .unwrap_or_else(|| self.config.ingest.source_path.clone());
+        match get_files(&expanded_path) {
+            Ok(files) => {
+                for file_name in files {
+                    if !*&file_name.contains(&".json".to_string()) || file_name.starts_with(".") {
+                        continue;
+                    };
+                    if let Ok(Some(log)) = &self.db.insert_file_ingest(&file_name, &expanded_path) {
+                        ingested.push(log.clone());
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::error!("Log ingestion failed: {}", e);
+            }
+        }
+        Ok(ingested)
     }
 
     pub fn list_logs(&self, limit: Option<i32>) -> color_eyre::Result<Vec<EntryLog>> {

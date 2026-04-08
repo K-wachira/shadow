@@ -1,5 +1,5 @@
 use crate::db::Database;
-use crate::db::EntryLog;
+use shadow_services::models::EntryLog;
 use crate::llm::ChatMessage;
 use crate::model::Message;
 use crate::model::MessageKind;

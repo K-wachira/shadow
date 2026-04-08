@@ -1,4 +1,4 @@
-use crate::db::EntryLog;
+use shadow_services::models::EntryLog;
 use crate::json_tree::JsonTree;
 
 #[derive(Debug, Clone)]

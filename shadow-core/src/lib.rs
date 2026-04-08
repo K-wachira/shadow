@@ -3,7 +3,6 @@ pub mod commands;
 pub mod config;
 pub mod db;
 pub mod engine;
-pub mod ingest;
 pub mod json_tree;
 pub mod llm;
 pub mod mind;
