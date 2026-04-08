@@ -1,0 +1,12 @@
+[llm_provider]
+provider = "mistralrs"
+model_name = "mistralrs-community/gemma-4-E2B-it-UQFF"
+base_url = "http://localhost:1234"
+api_key = "None"
+
+[reflection]
+interval_minutes = 60
+min_new_logs = 5
+
+[ingest]
+source_path = "~/Library/Mobile Documents/com~apple~CloudDocs/ShadowLogs/"
