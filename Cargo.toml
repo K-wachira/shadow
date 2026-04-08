@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "shadow-core",
+    "shadow-tools",
     "shadow-tui",
 ]
 resolver = "2"
