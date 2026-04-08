@@ -29,6 +29,10 @@ tracing-subscriber = "0.3"
 hotpath = "0.14"
 tracing = "0.1.44"
 tokio-util = "0.7.18"
+
+shadow-utils = { path = "../shadow-utils" }
+shadow-continuity = { path = "../shadow-continuity" }
+
 [features]
 hotpath = ["hotpath/hotpath"]
 hotpath-alloc = ["hotpath/hotpath-alloc"]
