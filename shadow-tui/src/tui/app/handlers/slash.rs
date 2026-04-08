@@ -235,6 +235,7 @@ fn handle_action_ingest(app_state: &mut TuiAppState, engine: &mut ShadowEngine) 
         }
         Err(e) => tracing::error!("ingest error: {}", e),
     }
+    app_state.active_op = ActiveOperation::Idle;
 }
 
 async fn handle_action_reflect(
@@ -262,7 +263,6 @@ async fn handle_action_reflect(
             }
         }
     });
-    app_state.background_op_start = None;
     Ok(())
 }
 
