@@ -7,4 +7,5 @@ engine: LLM inference & streaming
 mind: shadow mind core functionality
 llmclient: llm client & provider routing
 db: sqlite & data layer
+utils: supporting utils
 config: Configs for running the app

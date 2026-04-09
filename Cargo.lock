@@ -2836,6 +2836,7 @@ dependencies = [
  "shadow-continuity",
  "shadow-services",
  "shadow-tools",
+ "shadow-utils",
  "tokio",
  "tokio-stream",
  "toml",
