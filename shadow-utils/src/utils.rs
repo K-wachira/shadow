@@ -21,3 +21,15 @@ pub fn format_timestamp(ts: &str) -> String {
     // fallback — return as-is
     ts.to_string()
 }
+
+pub fn format_duration(secs: &u64) -> String {
+    let hours = secs / 3600;
+    let minutes = (secs % 3600) / 60;
+    let seconds = secs % 60;
+
+    match (hours, minutes, seconds) {
+        (0, 0, s) => format!("{}s", s),
+        (0, m, s) => format!("{}m {}s", m, s),
+        (h, m, s) => format!("{}h {}m {}s", h, m, s),
+    }
+}

@@ -1,5 +1,6 @@
 use shadow_services::models::EntryLog;
 use crate::json_tree::JsonTree;
+use shadow_utils::utils::format_duration;
 
 #[derive(Debug, Clone)]
 pub enum MessageKind {
@@ -103,22 +104,22 @@ impl AssistantState {
         match self {
             AssistantState::Idle => None,
             AssistantState::Choosing { secs } => {
-                Some(format!("Choosing…  (esc to cancel, {}s)", secs))
+                Some(format!("Choosing…  (esc to cancel, {})", format_duration(secs)))
             }
             AssistantState::Thinking { secs } => {
-                Some(format!("Thinking…  (esc to cancel, {}s)", secs))
+                Some(format!("Thinking…  (esc to cancel, {})", format_duration(secs)))
             }
             AssistantState::Preparing { secs } => {
-                Some(format!("Preparing… (esc to cancel, {}s)", secs))
+                Some(format!("Preparing… (esc to cancel, {})", format_duration(secs)))
             }
             AssistantState::Refining { secs } => {
-                Some(format!("Refining…  (esc to cancel, {}s)", secs))
+                Some(format!("Refining…  (esc to cancel, {})", format_duration(secs)))
             }
             AssistantState::Reflecting { secs } => {
-                Some(format!("Reflecting…  (esc to cancel, {}s)", secs))
+                Some(format!("Reflecting…  (esc to cancel, {})", format_duration(secs)))
             }
             AssistantState::Ingesting { secs } => {
-                Some(format!("Ingesting…  (esc to cancel, {}s)", secs))
+                Some(format!("Ingesting…  (esc to cancel, {})", format_duration(secs)))
             }
         }
     }
