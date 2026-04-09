@@ -104,8 +104,6 @@ impl ShadowEngine {
         logs_json: String,
     ) -> color_eyre::Result<ShadowMind> {
         let skill = std::fs::read_to_string(&paths.mind_skill)?;
-        eprint!("Reflecting");
-
         let messages = vec![
             ChatMessage {
                 role: "system".into(),
@@ -113,7 +111,9 @@ impl ShadowEngine {
                 ..ChatMessage::default()
             },
             ChatMessage::user(format!(
-                "--- Current shadow.mind ---\n{current_mind:?}\n\n--- Recent Logs ---\n{logs_json}\n\n---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation."
+                "--- Current shadow.mind ---\n{current_mind:?}\n\n
+                --- Recent Logs ---\n{logs_json}\n\n
+                ---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation."
             )),
         ];
 
@@ -131,7 +131,6 @@ impl ShadowEngine {
     
     // called from main thread — fetches logs before spawning
     pub fn gather_reflect_input(&mut self) ->  color_eyre::Result<String> {
-        eprint!("Getting logss");
         let logs = &self.db.get_logs(Some(LOG_LIMIT))?;
         let logs_json = serde_json::to_string_pretty(&logs)?;
         Ok(logs_json)
