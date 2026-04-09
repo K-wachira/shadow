@@ -3,6 +3,9 @@ use crate::tui::TuiAppState;
 use crate::tui::bright_bold;
 use crate::tui::composer_height;
 use crate::tui::default;
+use crate::tui::sentinel_assistant_styles;
+use crate::tui::sentinel_user_styles;
+use crate::tui::sentinel_user_bg_styles;
 use crate::tui::dim;
 use crate::tui::error_style;
 use crate::tui::logo_lines;
@@ -53,7 +56,7 @@ pub fn render_chat(
 
     f.render_widget(Clear, area);
 
-    let segments = build_segments(shadow_engine, tui_state);
+    let segments = build_segments(shadow_engine, tui_state, area);
     let total_rows = total_segment_rows(&segments, area.width);
     let visible_top = visible_top(total_rows, area.height as usize, tui_state);
     render_chat_slice(
@@ -96,12 +99,12 @@ pub fn ensure_memory_cursor_visible(
     }
 
     let Some(target_row) =
-        memory_cursor_row(focus_idx, shadow_engine, tui_state.tick, chat_area.width)
+        memory_cursor_row(focus_idx, shadow_engine, tui_state.tick, chat_area.width, total_area)
     else {
         return Ok(());
     };
 
-    let segments = build_segments(shadow_engine, tui_state);
+    let segments = build_segments(shadow_engine, tui_state, total_area);
     let total_rows = total_segment_rows(&segments, chat_area.width);
     let viewport_rows = chat_area.height as usize;
     let max_scroll = total_rows.saturating_sub(viewport_rows);
@@ -149,7 +152,7 @@ fn sync_chat_scrollback(
         tui_state.persisted_chat_width = chat_area.width;
     }
 
-    let segments = build_segments(shadow_engine, tui_state);
+    let segments = build_segments(shadow_engine, tui_state, total_area);
     let total_rows = total_segment_rows(&segments, chat_area.width);
     let persisted_target = if include_visible_viewport {
         total_rows
@@ -177,7 +180,7 @@ fn sync_chat_scrollback(
     Ok(())
 }
 
-fn build_segments(shadow_engine: &ShadowEngine, tui_state: &TuiAppState) -> Vec<Segment> {
+fn build_segments(shadow_engine: &ShadowEngine, tui_state: &TuiAppState, total_area: Rect,) -> Vec<Segment> {
     let mut segments = Vec::new();
 
     for (msg_idx, msg) in shadow_engine.messages.iter().enumerate() {
@@ -192,7 +195,7 @@ fn build_segments(shadow_engine: &ShadowEngine, tui_state: &TuiAppState) -> Vec<
                 segments.push(Segment::Lines(vec![Line::from("")]));
             }
             _ => {
-                let mut lines = message_to_lines(msg, tui_state.tick);
+                let mut lines = message_to_lines(msg, tui_state.tick, total_area);
                 if msg.indent == 0 {
                     lines.push(Line::from(""));
                 }
@@ -205,7 +208,7 @@ fn build_segments(shadow_engine: &ShadowEngine, tui_state: &TuiAppState) -> Vec<
 }
 
 fn memory_cursor_row(
-    focus_idx: usize, shadow_engine: &ShadowEngine, tick: u64, available_width: u16,
+    focus_idx: usize, shadow_engine: &ShadowEngine, tick: u64, available_width: u16,total_area: Rect,
 ) -> Option<usize> {
     let mut row = 0usize;
 
@@ -218,7 +221,7 @@ fn memory_cursor_row(
                 row += tree_render_height(tree, available_width) as usize + 1;
             }
             _ => {
-                let mut lines = message_to_lines(message, tick);
+                let mut lines = message_to_lines(message, tick, total_area);
                 if message.indent == 0 {
                     lines.push(Line::from(""));
                 }
@@ -354,17 +357,31 @@ fn visible_top(total_rows: usize, viewport_rows: usize, tui_state: &TuiAppState)
     }
 }
 
-fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
+fn message_to_lines(msg: &Message, tick: u64, total_area: Rect,) -> Vec<Line<'static>> {
     let pad = "  ".repeat(msg.indent as usize);
 
     match &msg.kind {
         MessageKind::Logo { text } => logo_lines(text),
 
-        MessageKind::UserInput { text } => vec![Line::from(vec![
-            Span::raw(format!("{}❯  ", pad)),
-            Span::styled(text.clone(), default()), // was bright()
-        ])],
 
+        MessageKind::UserInput { text } => {
+            let sentinel = format!("{}❯ ", pad);
+            let content_len = sentinel.len() + text.len();
+            let padding = " ".repeat((total_area.width as usize).saturating_sub(content_len-2));
+            let blank = " ".repeat(total_area.width as usize);
+
+            let line = Line::from(vec![
+                Span::styled(sentinel, sentinel_user_styles()),
+                Span::styled(text.clone(), sentinel_user_bg_styles()),
+                Span::styled(padding, sentinel_user_bg_styles()),
+            ]);
+            vec![
+                Line::from(Span::styled(blank.clone(), sentinel_user_bg_styles())),
+                line,
+                Line::from(Span::styled(blank.clone(), sentinel_user_bg_styles())),
+            ]
+        },
+        
         MessageKind::AssistantThought { text } => vec![Line::from(vec![
             Span::styled(format!("{}+  ", pad), Style::default().fg(Color::Blue)),
             Span::styled(text.clone(), default()),
@@ -376,7 +393,7 @@ fn message_to_lines(msg: &Message, tick: u64) -> Vec<Line<'static>> {
             if let Some(first) = lines.first_mut() {
                 first
                     .spans
-                    .insert(0, Span::styled(format!("{}❯  ", pad), default()));
+                    .insert(0, Span::styled(format!("{}● ", pad), sentinel_assistant_styles()));
             }
             lines
         }

@@ -47,6 +47,18 @@ pub fn default() -> Style {
     Style::default().fg(tui::hex_color("#FFFFFF"))
 }
 
+pub fn sentinel_assistant_styles() -> Style {
+    Style::default().fg(tui::hex_color("#767676"))
+}
+
+pub fn sentinel_user_styles() -> Style {
+    Style::default().fg(tui::hex_color("#C96524")).bg(tui::hex_color("#43454F"))
+}
+
+pub fn sentinel_user_bg_styles() -> Style {
+    Style::default().bg(tui::hex_color("#43454F"))
+}
+
 pub fn very_dim() -> Style {
     Style::default()
         .fg(Color::DarkGray)
