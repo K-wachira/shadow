@@ -61,9 +61,11 @@ pub async fn process_channels(
     match reflect_rx.try_recv() {
         Ok(new_mind) => {
             engine.mind = new_mind;
+            app_state.cancel_token.cancel();
             app_state.active_op = ActiveOperation::Idle;
         }
         Err(TryRecvError::Disconnected) => {
+            app_state.cancel_token.cancel();
             app_state.active_op = ActiveOperation::Idle;
             tracing::error!("reflect task disconnected unexpectedly");
         }
