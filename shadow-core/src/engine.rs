@@ -104,6 +104,7 @@ impl ShadowEngine {
         logs_json: String,
     ) -> color_eyre::Result<ShadowMind> {
         let skill = std::fs::read_to_string(&paths.mind_skill)?;
+        let today = chrono::Local::now().format("%Y-%m-%d");
         let messages = vec![
             ChatMessage {
                 role: "system".into(),
@@ -111,10 +112,16 @@ impl ShadowEngine {
                 ..ChatMessage::default()
             },
             ChatMessage::user(format!(
-                "--- Current shadow.mind ---\n{current_mind:?}\n\n
-                --- Recent Logs ---\n{logs_json}\n\n
-                ---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation."
+                "--- Current shadow.mind ---\n{current_mind:?}\n\n\
+                --- Recent Logs ---\n{logs_json}\n\n\
+                --- Today's Date ---\n{today}\n\n\
+                ---\nProduce the new shadow.mind. Start your response with {{ and end with }}. No code fences, no markdown, no explanation."
             )),
+            ChatMessage {
+                role: "assistant".into(),
+                content: "{".into(),
+                ..ChatMessage::default()
+            },
         ];
 
         let response = llm_client
@@ -122,9 +129,11 @@ impl ShadowEngine {
             .await
             .map_err(|e| color_eyre::eyre::eyre!(e))?;
 
-        let new_mind: ShadowMind = json5::from_str(&response)
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to parse shadow.mind: {}", e))?;
+        let full = format!("{{{}", response.trim());
+        let new_mind: ShadowMind = json5::from_str(&full)
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to parse shadow.mind: {e}\nRaw:\n{full}"))?;
 
+        tracing::error!("raw reflect response: {:?}", new_mind);
         mind::save(&new_mind, &paths.mind)?;
         Ok(new_mind)
     }
