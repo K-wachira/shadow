@@ -41,6 +41,7 @@ pub fn render_status_line(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
     // Idle: nothing — blank row
 }
 
+#[allow(dead_code)]
 pub fn render_yolo_hint(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
     let (label, color) = if tui_state.yolo_mode {
         ("YOLO Mode", Color::Red)

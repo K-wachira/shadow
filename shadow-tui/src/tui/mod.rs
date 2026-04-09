@@ -35,7 +35,6 @@ pub use logo::logo_lines;
 pub use markdown_parse::markdown_to_lines;
 pub use shadow_render::render;
 pub use status_widget::render_status_line;
-pub use status_widget::render_yolo_hint;
 pub use tui_models::PendingConfirm;
 pub use tui_models::PendingConfirmAction;
 pub use tui_models::SLASH_COMMANDS;

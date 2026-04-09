@@ -4,7 +4,6 @@ use crate::tui::render_bottom_pane;
 use crate::tui::render_chat;
 use crate::tui::render_input;
 use crate::tui::render_status_line;
-use crate::tui::render_yolo_hint;
 
 use crate::tui::SLASH_COMMANDS;
 use ratatui::Frame;
@@ -50,7 +49,7 @@ pub fn render(f: &mut Frame, tui_state: &TuiAppState, shadow_engine: &mut Shadow
 
     render_chat(f, chunks[0], tui_state, shadow_engine);
     render_status_line(f, chunks[1], tui_state);
-    render_yolo_hint(f, chunks[2], tui_state);
+    // render_yolo_hint(f, chunks[2], tui_state);
     render_input(f, chunks[3], tui_state);
     render_bottom_pane(f, chunks[4], tui_state, shadow_engine);
 }
