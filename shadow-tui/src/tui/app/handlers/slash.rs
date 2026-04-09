@@ -273,6 +273,7 @@ fn handle_action_rename(
     app_state.rename_mode = true;
     input_buf.clear();
     input_buf.push_str(engine.session_name.clone().as_str());
+    app_state.rename_mode = false;
 }
 
 fn handle_action_memory(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
