@@ -50,6 +50,15 @@ fn render_slash_picker(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
         return;
     }
 
+    let ( _ , max_len) = matching.iter().fold(
+        (usize::MAX, 0),
+        |(min, max), cmd| {
+            let len = cmd.name.len();
+            (min.min(len), max.max(len))
+        },
+    );
+    
+    let width = max_len + 3;
     let lines: Vec<Line> = matching
         .iter()
         .enumerate()
@@ -62,9 +71,10 @@ fn render_slash_picker(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
                     .fg(Color::Rgb(153, 153, 153))
                     .add_modifier(Modifier::BOLD)
             };
+            let padded_name = format!("{:<width$}", cmd.name, width = width);    
             Line::from(vec![
                 Span::raw("  "),
-                Span::styled(cmd.name, style),
+                Span::styled(padded_name, style),
                 Span::raw("  "),
                 Span::styled(cmd.description, style),
             ])
