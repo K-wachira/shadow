@@ -24,6 +24,7 @@ tokio-util = "0.7.18"
 shadow-core = { path = "../shadow-core" }
 shadow-utils = { path = "../shadow-utils" }
 shadow-continuity = { path = "../shadow-continuity" }
+shadow-services = { path = "../shadow-services" }
 
 [features]
 hotpath = ["hotpath/hotpath"]

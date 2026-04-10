@@ -1,7 +1,7 @@
 mod channels;
 mod handlers;
 mod state;
-
+use std::path::PathBuf;
 use crate::tui::TuiAppState;
 use crate::tui::flush_chat_transcript;
 use crate::tui::persist_chat_scrollback;
@@ -24,6 +24,7 @@ use self::handlers::handle_pending_confirm_key;
 use self::state::sync_input_state;
 use self::state::update_assistant_state;
 use self::state::update_tick;
+use shadow_services::ingest::get_files;
 
 pub async fn run(
     mut terminal: DefaultTerminal, shadow_engine: &mut ShadowEngine,
@@ -32,8 +33,16 @@ pub async fn run(
     let (done_tx, mut done_streaming_rx) = mpsc::unbounded_channel::<()>();
     let (title_tx, mut title_rx) = mpsc::unbounded_channel::<String>();
     let (reflect_tx, mut reflect_rx) = mpsc::unbounded_channel::<ShadowMind>();
+    let (ingest_tx, mut ingest_rx) = mpsc::unbounded_channel::<()>();
     let mut app_state = TuiAppState::default();
     let mut input_buf = String::new();
+    
+    // spawn watcher once
+    start_ingest_watcher(
+        shadow_engine.config.ingest.source_path.clone(),
+        ingest_tx,
+    );
+
 
     loop {
         process_channels(
@@ -44,6 +53,7 @@ pub async fn run(
             shadow_engine,
             title_tx.clone(),
             &mut reflect_rx,
+            &mut ingest_rx,
         )
         .await?;
 
@@ -118,4 +128,29 @@ pub async fn run(
     let _ = shadow_engine.end_session();
     app_state.assistant_state = AssistantState::Idle;
     Ok(())
+}
+
+pub fn start_ingest_watcher(
+    source_path: PathBuf,
+    tx: mpsc::UnboundedSender<()>,
+) {
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(300));
+        let mut last_seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        loop {
+            interval.tick().await;
+            if let Ok(files) = get_files(&source_path) {
+                let current: std::collections::HashSet<String> = files
+                    .into_iter()
+                    .filter(|f| f.contains(".json") && !f.starts_with('.'))
+                    .collect();
+
+                if current != last_seen {
+                    last_seen = current;
+                    let _ = tx.send(());
+                }
+            }
+        }
+    });
 }

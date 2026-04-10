@@ -8,3 +8,4 @@ pub use mouse::handle_mouse;
 pub use normal::handle_key_normal;
 pub use slash::handle_key_slash;
 pub use slash::handle_pending_confirm_key;
+pub use slash::handle_action_ingest;

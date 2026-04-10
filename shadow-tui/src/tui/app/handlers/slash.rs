@@ -219,7 +219,7 @@ fn handle_action_history(app_state: &mut TuiAppState, engine: &mut ShadowEngine)
     }
 }
 
-fn handle_action_ingest(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
+pub fn handle_action_ingest(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
     app_state.active_op = ActiveOperation::Ingesting(Instant::now());
     match engine.ingest_icloud_logs() {
         Ok(logs) => {
@@ -231,6 +231,16 @@ fn handle_action_ingest(app_state: &mut TuiAppState, engine: &mut ShadowEngine) 
                     .collect(),
             );
             engine.messages.push(Message::tool(tool));
+
+            if !logs.is_empty() {
+                let mind = engine.mind.clone();
+                let llm = engine.llm_client.clone();
+                let mind_path = engine.paths.mind.clone();
+
+                tokio::spawn(async move {
+                    ShadowEngine::process_ingested_logs(logs, mind, llm, mind_path).await;
+                });
+            }
         }
         Err(e) => tracing::error!("ingest error: {}", e),
     }
