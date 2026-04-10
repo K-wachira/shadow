@@ -1,7 +1,6 @@
 mod channels;
 mod handlers;
 mod state;
-use std::path::PathBuf;
 use crate::tui::TuiAppState;
 use crate::tui::flush_chat_transcript;
 use crate::tui::persist_chat_scrollback;
@@ -9,9 +8,10 @@ use crate::tui::render;
 use crossterm::event::Event;
 use crossterm::event::{self};
 use ratatui::DefaultTerminal;
-use shadow_core::locus::Locus;
 use shadow_continuity::mind::ShadowMind;
+use shadow_core::locus::Locus;
 use shadow_core::model::AssistantState;
+use std::path::PathBuf;
 use std::time::Duration;
 use tokio::sync::mpsc;
 
@@ -26,9 +26,7 @@ use self::state::update_assistant_state;
 use self::state::update_tick;
 use shadow_services::ingest::get_files;
 
-pub async fn run(
-    mut terminal: DefaultTerminal, locus: &mut Locus,
-) -> color_eyre::Result<()> {
+pub async fn run(mut terminal: DefaultTerminal, locus: &mut Locus) -> color_eyre::Result<()> {
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
     let (done_tx, mut done_streaming_rx) = mpsc::unbounded_channel::<()>();
     let (title_tx, mut title_rx) = mpsc::unbounded_channel::<String>();
@@ -36,13 +34,9 @@ pub async fn run(
     let (ingest_tx, mut ingest_rx) = mpsc::unbounded_channel::<()>();
     let mut app_state = TuiAppState::default();
     let mut input_buf = String::new();
-    
-    // spawn watcher once
-    start_ingest_watcher(
-        locus.config.ingest.source_path.clone(),
-        ingest_tx,
-    );
 
+    // spawn watcher once
+    start_ingest_watcher(locus.config.ingest.source_path.clone(), ingest_tx);
 
     loop {
         process_channels(
@@ -130,10 +124,7 @@ pub async fn run(
     Ok(())
 }
 
-pub fn start_ingest_watcher(
-    source_path: PathBuf,
-    tx: mpsc::UnboundedSender<()>,
-) {
+pub fn start_ingest_watcher(source_path: PathBuf, tx: mpsc::UnboundedSender<()>) {
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(300));
         let mut last_seen: std::collections::HashSet<String> = std::collections::HashSet::new();

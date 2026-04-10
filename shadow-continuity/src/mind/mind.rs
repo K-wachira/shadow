@@ -1,7 +1,7 @@
-use shadow_utils::utils;
 use crate::mind::mind_model::Meta;
 use crate::mind::mind_model::ShadowMind;
 use color_eyre::Result;
+use shadow_utils::utils;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -38,4 +38,3 @@ pub fn init() -> ShadowMind {
         values: HashMap::new(),
     }
 }
-

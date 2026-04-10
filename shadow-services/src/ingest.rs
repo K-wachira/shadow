@@ -14,7 +14,6 @@ pub fn process_json_file(log_name: &String, dir: &PathBuf) -> color_eyre::Result
     Ok(raw)
 }
 
-
 pub fn get_files(dir: &PathBuf) -> color_eyre::Result<Vec<String>> {
     let files: Vec<String> = fs::read_dir(&dir)
         .map_err(|e| color_eyre::eyre::eyre!(e))?

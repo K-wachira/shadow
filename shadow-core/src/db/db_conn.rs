@@ -1,7 +1,7 @@
-use shadow_services::models::EntryLog;
-use shadow_services::models::RawLog;
-use shadow_services::models::FileIngest;
 use shadow_services::ingest::process_json_file;
+use shadow_services::models::EntryLog;
+use shadow_services::models::FileIngest;
+use shadow_services::models::RawLog;
 
 use crate::db::SessionMessages;
 use crate::db::Sessions;
@@ -122,7 +122,7 @@ impl Database {
     //             content='shadow_logs',
     //             content_rowid='id'
     //         );
-    
+
     //         -- Messages FTS
     //         CREATE VIRTUAL TABLE IF NOT EXISTS shadow_messages_fts USING fts5(
     //             content,
@@ -130,27 +130,27 @@ impl Database {
     //             content='shadow_messages',
     //             content_rowid='id'
     //         );
-    
+
     //         -- Populate from existing rows (safe to re-run: IF NOT EXISTS on the table handles it)
     //         INSERT OR IGNORE INTO shadow_logs_fts(rowid, content, location, log_type)
     //             SELECT id, content, location, log_type FROM shadow_logs;
-    
+
     //         INSERT OR IGNORE INTO shadow_messages_fts(rowid, content, role)
     //             SELECT id, content, role FROM shadow_messages;
-    
+
     //         -- Logs triggers
     //         CREATE TRIGGER IF NOT EXISTS shadow_logs_ai
     //         AFTER INSERT ON shadow_logs BEGIN
     //             INSERT INTO shadow_logs_fts(rowid, content, location, log_type)
     //             VALUES (new.id, new.content, new.location, new.log_type);
     //         END;
-    
+
     //         CREATE TRIGGER IF NOT EXISTS shadow_logs_ad
     //         AFTER DELETE ON shadow_logs BEGIN
     //             INSERT INTO shadow_logs_fts(shadow_logs_fts, rowid, content, location, log_type)
     //             VALUES ('delete', old.id, old.content, old.location, old.log_type);
     //         END;
-    
+
     //         CREATE TRIGGER IF NOT EXISTS shadow_logs_au
     //         AFTER UPDATE ON shadow_logs BEGIN
     //             INSERT INTO shadow_logs_fts(shadow_logs_fts, rowid, content, location, log_type)
@@ -158,20 +158,20 @@ impl Database {
     //             INSERT INTO shadow_logs_fts(rowid, content, location, log_type)
     //             VALUES (new.id, new.content, new.location, new.log_type);
     //         END;
-    
+
     //         -- Messages triggers
     //         CREATE TRIGGER IF NOT EXISTS shadow_messages_ai
     //         AFTER INSERT ON shadow_messages BEGIN
     //             INSERT INTO shadow_messages_fts(rowid, content, role)
     //             VALUES (new.id, new.content, new.role);
     //         END;
-    
+
     //         CREATE TRIGGER IF NOT EXISTS shadow_messages_ad
     //         AFTER DELETE ON shadow_messages BEGIN
     //             INSERT INTO shadow_messages_fts(shadow_messages_fts, rowid, content, role)
     //             VALUES ('delete', old.id, old.content, old.role);
     //         END;
-    
+
     //         CREATE TRIGGER IF NOT EXISTS shadow_messages_au
     //         AFTER UPDATE ON shadow_messages BEGIN
     //             INSERT INTO shadow_messages_fts(shadow_messages_fts, rowid, content, role)
@@ -180,7 +180,7 @@ impl Database {
     //             VALUES (new.id, new.content, new.role);
     //         END;
     //     ")?;
-    
+
     //     // Backfill logs if index is empty
     //     let logs_count: i64 = self.conn.query_row(
     //         "SELECT COUNT(*) FROM shadow_logs_fts",
@@ -193,7 +193,7 @@ impl Database {
     //                 SELECT id, content, location, log_type FROM shadow_logs;
     //         ")?;
     //     }
-    
+
     //     // Backfill messages if index is empty
     //     let messages_count: i64 = self.conn.query_row(
     //         "SELECT COUNT(*) FROM shadow_messages_fts",
@@ -206,10 +206,10 @@ impl Database {
     //                 SELECT id, content, role FROM shadow_messages;
     //         ")?;
     //     }
-    
+
     //     Ok(())
     // }
-    
+
     // Inserts a single log
     pub fn insert_log(&self, log: &RawLog) -> color_eyre::Result<EntryLog> {
         self.conn.execute(

@@ -3,20 +3,20 @@ use crate::config::Config;
 use crate::db::Database;
 use crate::db::SessionMessages;
 use crate::db::Sessions;
-use shadow_services::models::EntryLog;
 use crate::llm::ChatMessage;
 use crate::llm::LlmClient;
+use crate::locus::mind_op;
 use crate::model::AssistantState;
 use crate::model::Message;
 use crate::model::MessageKind;
 use crate::setup::ShadowPaths;
+use shadow_continuity::mind;
+use shadow_continuity::mind::ShadowMind;
+use shadow_services::models::EntryLog;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
-use shadow_continuity::mind::ShadowMind;
-use shadow_continuity::mind;
-use crate::locus::mind_op;
 
 pub struct Locus {
     pub db: Arc<Database>,

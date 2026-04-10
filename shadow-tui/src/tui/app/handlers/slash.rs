@@ -7,9 +7,12 @@ use crate::tui::ensure_memory_cursor_visible;
 use crate::tui::tui_models::ActiveOperation;
 use crossterm::event::KeyCode;
 use json5::from_str;
-use shadow_core::locus::Locus;
-use shadow_core::json_tree::JsonTree;
 use shadow_continuity::mind::ShadowMind;
+use shadow_core::json_tree::JsonTree;
+use shadow_core::locus::Locus;
+use shadow_core::locus::gather_reflect_input;
+use shadow_core::locus::process_ingested_logs;
+use shadow_core::locus::reflect;
 use shadow_core::model::Message;
 use shadow_core::model::ToolCall;
 use shadow_core::model::ToolPayload;
@@ -19,12 +22,8 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
-use shadow_core::locus::process_ingested_logs;
-use shadow_core::locus::gather_reflect_input;
-use shadow_core::locus::reflect;
 
-#[derive(Clone, Copy)]
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 enum SlashAction {
     New,
     Delete,
@@ -158,8 +157,8 @@ fn reset_slash_picker(app_state: &mut TuiAppState, input_buf: &mut String) {
 }
 
 async fn run_action(
-    action: SlashAction, app_state: &mut TuiAppState, locus: &mut Locus,
-    input_buf: &mut String, reflect_tx: mpsc::UnboundedSender<ShadowMind>,
+    action: SlashAction, app_state: &mut TuiAppState, locus: &mut Locus, input_buf: &mut String,
+    reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<bool> {
     match action {
         SlashAction::New => handle_action_new(app_state, locus),
@@ -251,9 +250,7 @@ pub fn handle_action_ingest(app_state: &mut TuiAppState, locus: &mut Locus) {
 }
 
 async fn handle_action_reflect(
-    app_state: &mut TuiAppState,
-    locus: &mut Locus,
-    reflect_tx: mpsc::UnboundedSender<ShadowMind>,
+    app_state: &mut TuiAppState, locus: &mut Locus, reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<()> {
     let logs_json = gather_reflect_input(&locus.db)?;
     let llm_client = Arc::clone(&locus.llm_client);
@@ -280,9 +277,7 @@ async fn handle_action_reflect(
     Ok(())
 }
 
-fn handle_action_rename(
-    app_state: &mut TuiAppState, locus: &mut Locus, input_buf: &mut String,
-) {
+fn handle_action_rename(app_state: &mut TuiAppState, locus: &mut Locus, input_buf: &mut String) {
     app_state.rename_mode = true;
     input_buf.clear();
     input_buf.push_str(locus.session_name.clone().as_str());

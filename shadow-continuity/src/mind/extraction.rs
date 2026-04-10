@@ -1,7 +1,7 @@
-use shadow_services::models::EntryLog;
 use crate::mind::mind_model::Belief;
-use shadow_utils::utils;
 use crate::mind::mind_model::ShadowMind;
+use shadow_services::models::EntryLog;
+use shadow_utils::utils;
 
 pub fn collect_field_paths(mind: &ShadowMind) -> Vec<String> {
     let mut paths = Vec::new();

@@ -52,7 +52,9 @@ pub fn sentinel_assistant_styles() -> Style {
 }
 
 pub fn sentinel_user_styles() -> Style {
-    Style::default().fg(tui::hex_color("#C96524")).bg(tui::hex_color("#43454F"))
+    Style::default()
+        .fg(tui::hex_color("#C96524"))
+        .bg(tui::hex_color("#43454F"))
 }
 
 pub fn sentinel_user_bg_styles() -> Style {

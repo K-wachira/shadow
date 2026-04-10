@@ -1,21 +1,18 @@
-use shadow_services::models::EntryLog;
+use crate::db::Database;
 use crate::llm::ChatMessage;
 use crate::llm::LlmClient;
 use crate::setup::ShadowPaths;
-use std::sync::Arc;
-use std::path::PathBuf;
-use shadow_continuity::mind::ShadowMind;
 use shadow_continuity::mind;
 use shadow_continuity::mind::Belief;
-use crate::db::Database;
+use shadow_continuity::mind::ShadowMind;
 use shadow_services::ingest::get_files;
+use shadow_services::models::EntryLog;
+use std::path::PathBuf;
+use std::sync::Arc;
 const LOG_LIMIT: i32 = 30;
 
 pub async fn reflect(
-    llm_client: Arc<LlmClient>,
-    paths: ShadowPaths,
-    current_mind: ShadowMind,
-    logs_json: String
+    llm_client: Arc<LlmClient>, paths: ShadowPaths, current_mind: ShadowMind, logs_json: String,
 ) -> color_eyre::Result<ShadowMind> {
     let skill = std::fs::read_to_string(&paths.mind_skill)?;
     let today = chrono::Local::now().format("%Y-%m-%d");
@@ -52,10 +49,9 @@ pub async fn reflect(
 }
 
 // spawnable — no db access
-pub async fn reflect_with_input( llm_client: Arc<LlmClient>,
-    paths: ShadowPaths,
-    db: &Database
- ) ->  color_eyre::Result<ShadowMind> {
+pub async fn reflect_with_input(
+    llm_client: Arc<LlmClient>, paths: ShadowPaths, db: &Database,
+) -> color_eyre::Result<ShadowMind> {
     let skill = std::fs::read_to_string(&paths.mind_skill)?;
     let logs_json = gather_reflect_input(db)?;
     let messages = vec![
@@ -82,17 +78,14 @@ pub async fn reflect_with_input( llm_client: Arc<LlmClient>,
 }
 
 // called from main thread — fetches logs before spawning
-pub fn gather_reflect_input( db: &Database) ->  color_eyre::Result<String> {
+pub fn gather_reflect_input(db: &Database) -> color_eyre::Result<String> {
     let logs = db.get_logs(Some(LOG_LIMIT))?;
     let logs_json = serde_json::to_string_pretty(&logs)?;
     Ok(logs_json)
 }
 
 pub async fn process_ingested_logs(
-    logs: Vec<EntryLog>,
-    mind: ShadowMind,
-    llm: Arc<LlmClient>,
-    mind_path: PathBuf,
+    logs: Vec<EntryLog>, mind: ShadowMind, llm: Arc<LlmClient>, mind_path: PathBuf,
 ) {
     for log in logs {
         match extract_affected_fields(&mind, &log, &llm).await {
@@ -100,7 +93,9 @@ pub async fn process_ingested_logs(
                 let mut updated_mind = mind.clone();
                 for field_path in fields {
                     let parts: Vec<&str> = field_path.splitn(2, '.').collect();
-                    if parts.len() != 2 { continue; }
+                    if parts.len() != 2 {
+                        continue;
+                    }
                     let (layer, key) = (parts[0], parts[1]);
 
                     let belief = match layer {
@@ -113,15 +108,21 @@ pub async fn process_ingested_logs(
 
                     if let Some(current) = belief {
                         match update_belief(&field_path, &current, &log, &llm).await {
-                            Ok(updated) => {
-                                match layer {
-                                    "surface" => { updated_mind.surface.insert(key.to_string(), updated); }
-                                    "behavioural" => { updated_mind.behavioural.insert(key.to_string(), updated); }
-                                    "mental_model" => { updated_mind.mental_model.insert(key.to_string(), updated); }
-                                    "values" => { updated_mind.values.insert(key.to_string(), updated); }
-                                    _ => {}
+                            Ok(updated) => match layer {
+                                "surface" => {
+                                    updated_mind.surface.insert(key.to_string(), updated);
                                 }
-                            }
+                                "behavioural" => {
+                                    updated_mind.behavioural.insert(key.to_string(), updated);
+                                }
+                                "mental_model" => {
+                                    updated_mind.mental_model.insert(key.to_string(), updated);
+                                }
+                                "values" => {
+                                    updated_mind.values.insert(key.to_string(), updated);
+                                }
+                                _ => {}
+                            },
                             Err(e) => tracing::error!("update failed for {}: {}", field_path, e),
                         }
                     }
@@ -135,11 +136,8 @@ pub async fn process_ingested_logs(
     }
 }
 
-
 pub async fn extract_affected_fields(
-    mind: &ShadowMind,
-    log: &EntryLog,
-    llm: &LlmClient,
+    mind: &ShadowMind, log: &EntryLog, llm: &LlmClient,
 ) -> color_eyre::Result<Vec<String>> {
     let fields = mind::collect_field_paths(mind);
     let log_str = serde_json::to_string_pretty(log).unwrap_or_default();
@@ -150,10 +148,7 @@ pub async fn extract_affected_fields(
 }
 
 pub async fn update_belief(
-    field_path: &str,
-    belief: &Belief,
-    log: &EntryLog,
-    llm: &LlmClient,
+    field_path: &str, belief: &Belief, log: &EntryLog, llm: &LlmClient,
 ) -> color_eyre::Result<Belief> {
     let prompt = mind::build_update_prompt(field_path, belief, log);
     let messages = vec![ChatMessage::user(prompt)];
@@ -169,16 +164,15 @@ pub async fn update_belief(
     Ok(serde_json::from_str(clean)?)
 }
 
-
 pub fn ingest_icloud_logs(
-    db: &Database,
-    source_path: &PathBuf,
+    db: &Database, source_path: &PathBuf,
 ) -> color_eyre::Result<Vec<EntryLog>> {
     let mut ingested = vec![];
     let expanded_path = dirs::home_dir()
         .map(|h| {
             PathBuf::from(
-                &source_path.to_string_lossy()
+                &source_path
+                    .to_string_lossy()
                     .replacen("~", &h.to_string_lossy(), 1),
             )
         })

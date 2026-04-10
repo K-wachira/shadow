@@ -1,9 +1,9 @@
 use crate::db::Database;
-use shadow_services::models::EntryLog;
 use crate::llm::ChatMessage;
 use crate::model::Message;
 use crate::model::MessageKind;
 use crate::setup::ShadowPaths;
+use shadow_services::models::EntryLog;
 
 pub fn ask(
     conn: &Database, curr_content: &[Message], paths: &ShadowPaths,

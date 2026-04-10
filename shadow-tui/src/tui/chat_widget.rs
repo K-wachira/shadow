@@ -3,14 +3,14 @@ use crate::tui::TuiAppState;
 use crate::tui::bright_bold;
 use crate::tui::composer_height;
 use crate::tui::default;
-use crate::tui::sentinel_assistant_styles;
-use crate::tui::sentinel_user_styles;
-use crate::tui::sentinel_user_bg_styles;
 use crate::tui::dim;
 use crate::tui::error_style;
 use crate::tui::logo_lines;
 use crate::tui::markdown_to_lines;
 use crate::tui::muted;
+use crate::tui::sentinel_assistant_styles;
+use crate::tui::sentinel_user_bg_styles;
+use crate::tui::sentinel_user_styles;
 use crate::tui::tree_cursor_screen_row;
 use crate::tui::tree_render_height;
 use crate::tui::tree_to_lines;
@@ -46,9 +46,7 @@ enum Segment {
     Lines(Vec<Line<'static>>),
 }
 
-pub fn render_chat(
-    f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus,
-) {
+pub fn render_chat(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus) {
     if tui_state.history_mode {
         render_session_list(f, area, tui_state, locus);
         return;
@@ -98,9 +96,13 @@ pub fn ensure_memory_cursor_visible(
         return Ok(());
     }
 
-    let Some(target_row) =
-        memory_cursor_row(focus_idx, locus, tui_state.tick, chat_area.width, total_area)
-    else {
+    let Some(target_row) = memory_cursor_row(
+        focus_idx,
+        locus,
+        tui_state.tick,
+        chat_area.width,
+        total_area,
+    ) else {
         return Ok(());
     };
 
@@ -180,7 +182,7 @@ fn sync_chat_scrollback(
     Ok(())
 }
 
-fn build_segments(locus: &Locus, tui_state: &TuiAppState, total_area: Rect,) -> Vec<Segment> {
+fn build_segments(locus: &Locus, tui_state: &TuiAppState, total_area: Rect) -> Vec<Segment> {
     let mut segments = Vec::new();
 
     for (msg_idx, msg) in locus.messages.iter().enumerate() {
@@ -208,7 +210,7 @@ fn build_segments(locus: &Locus, tui_state: &TuiAppState, total_area: Rect,) -> 
 }
 
 fn memory_cursor_row(
-    focus_idx: usize, locus: &Locus, tick: u64, available_width: u16,total_area: Rect,
+    focus_idx: usize, locus: &Locus, tick: u64, available_width: u16, total_area: Rect,
 ) -> Option<usize> {
     let mut row = 0usize;
 
@@ -357,17 +359,16 @@ fn visible_top(total_rows: usize, viewport_rows: usize, tui_state: &TuiAppState)
     }
 }
 
-fn message_to_lines(msg: &Message, tick: u64, total_area: Rect,) -> Vec<Line<'static>> {
+fn message_to_lines(msg: &Message, tick: u64, total_area: Rect) -> Vec<Line<'static>> {
     let pad = "  ".repeat(msg.indent as usize);
 
     match &msg.kind {
         MessageKind::Logo { text } => logo_lines(text),
 
-
         MessageKind::UserInput { text } => {
             let sentinel = format!("{}❯ ", pad);
             let content_len = sentinel.len() + text.len();
-            let padding = " ".repeat((total_area.width as usize).saturating_sub(content_len-2));
+            let padding = " ".repeat((total_area.width as usize).saturating_sub(content_len - 2));
             let blank = " ".repeat(total_area.width as usize);
 
             let line = Line::from(vec![
@@ -380,8 +381,8 @@ fn message_to_lines(msg: &Message, tick: u64, total_area: Rect,) -> Vec<Line<'st
                 line,
                 Line::from(Span::styled(blank.clone(), sentinel_user_bg_styles())),
             ]
-        },
-        
+        }
+
         MessageKind::AssistantThought { text } => vec![Line::from(vec![
             Span::styled(format!("{}+  ", pad), Style::default().fg(Color::Blue)),
             Span::styled(text.clone(), default()),
@@ -391,9 +392,10 @@ fn message_to_lines(msg: &Message, tick: u64, total_area: Rect,) -> Vec<Line<'st
             let mut lines = markdown_to_lines(&text);
             // prepend the ">" indicator on the first line
             if let Some(first) = lines.first_mut() {
-                first
-                    .spans
-                    .insert(0, Span::styled(format!("{}● ", pad), sentinel_assistant_styles()));
+                first.spans.insert(
+                    0,
+                    Span::styled(format!("{}● ", pad), sentinel_assistant_styles()),
+                );
             }
             lines
         }
@@ -403,9 +405,7 @@ fn message_to_lines(msg: &Message, tick: u64, total_area: Rect,) -> Vec<Line<'st
     }
 }
 
-fn render_session_list(
-    f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus,
-) {
+fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus) {
     let history_sessions = match locus.list_sessions(30) {
         Ok(sessions) => sessions,
         Err(e) => {
