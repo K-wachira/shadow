@@ -2815,6 +2815,8 @@ dependencies = [
  "color-eyre",
  "json5",
  "serde",
+ "serde_json",
+ "shadow-services",
  "shadow-utils",
 ]
 
@@ -2847,6 +2849,7 @@ dependencies = [
 name = "shadow-services"
 version = "0.1.0"
 dependencies = [
+ "color-eyre",
  "dirs",
  "serde",
  "serde_json",
@@ -2879,6 +2882,7 @@ dependencies = [
  "serde_json",
  "shadow-continuity",
  "shadow-core",
+ "shadow-services",
  "shadow-utils",
  "tokio",
  "tokio-stream",
