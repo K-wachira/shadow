@@ -5,7 +5,7 @@ use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyModifiers;
 use json5::from_str;
-use shadow_core::engine::Locus;
+use shadow_core::locus::Locus;
 use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 use std::path::Path;
@@ -16,7 +16,7 @@ use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 pub async fn handle_key_normal(
-    key: KeyEvent, app_state: &mut TuiAppState, engine: &mut Locus, input_buf: &mut String,
+    key: KeyEvent, app_state: &mut TuiAppState, locus: &mut Locus, input_buf: &mut String,
     tx: mpsc::UnboundedSender<String>, done_tx: mpsc::UnboundedSender<()>,
 ) -> color_eyre::Result<bool> {
     if let Some(focus_idx) = app_state.memory_focus {
@@ -26,7 +26,7 @@ pub async fn handle_key_normal(
         if let Some(Message {
             kind: MessageKind::MemoryTree(tree),
             ..
-        }) = engine.messages.get_mut(focus_idx)
+        }) = locus.messages.get_mut(focus_idx)
         {
             if app_state.memory_edit_mode {
                 match key.code {
@@ -132,7 +132,7 @@ pub async fn handle_key_normal(
             }
         }
         if keep_cursor_visible {
-            ensure_memory_cursor_visible(app_state, engine)?;
+            ensure_memory_cursor_visible(app_state, locus)?;
         } else if scroll_transcript_up {
             app_state.scroll_transcript_up();
         } else if scroll_transcript_down {
@@ -158,9 +158,9 @@ pub async fn handle_key_normal(
                 return Ok(false);
             }
             if app_state.rename_mode {
-                match engine.db.update_session_title(engine.session_id, input_buf) {
+                match locus.db.update_session_title(locus.session_id, input_buf) {
                     Ok(()) => {
-                        engine.session_name = input_buf.clone();
+                        locus.session_name = input_buf.clone();
                     }
                     Err(e) => {
                         tracing::error!("Error on title rename: {}", e);
@@ -171,7 +171,7 @@ pub async fn handle_key_normal(
             }
             input_buf.clear();
 
-            match engine.send_message(&prompt).await {
+            match locus.send_message(&prompt).await {
                 Ok(stream) => {
                     app_state.active_op = ActiveOperation::Streaming(Instant::now());
                     let mut stream = Box::pin(stream);

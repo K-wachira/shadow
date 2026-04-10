@@ -6,7 +6,7 @@ use ratatui::Terminal;
 use ratatui::TerminalOptions;
 use ratatui::Viewport;
 use ratatui::backend::CrosstermBackend;
-use shadow_core::engine::Locus;
+use shadow_core::locus::Locus;
 use shadow_core::setup;
 use shadow_core::*;
 use std::env;

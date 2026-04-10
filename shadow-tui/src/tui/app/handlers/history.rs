@@ -1,10 +1,10 @@
 use crate::tui::TuiAppState;
 use crossterm::event::KeyCode;
-use shadow_core::engine::Locus;
+use shadow_core::locus::Locus;
 use shadow_core::model::Message;
 
 pub fn handle_key_history(
-    key: KeyCode, app_state: &mut TuiAppState, engine: &mut Locus,
+    key: KeyCode, app_state: &mut TuiAppState, locus: &mut Locus,
 ) -> color_eyre::Result<bool> {
     match key {
         KeyCode::Esc => {
@@ -17,21 +17,21 @@ pub fn handle_key_history(
             let selected_id = selected.id;
             let selected_title = selected.title.clone();
 
-            match engine.load_session(selected_id) {
+            match locus.load_session(selected_id) {
                 Ok(messages) => {
-                    engine.messages.clear();
-                    engine
+                    locus.messages.clear();
+                    locus
                         .messages
-                        .push(Message::logo(&engine.llm_client.model_name));
+                        .push(Message::logo(&locus.llm_client.model_name));
                     for message in messages {
                         match message.role.as_str() {
-                            "user" => engine.messages.push(Message::user(message.content)),
-                            "assistant" => engine.messages.push(Message::agent(message.content)),
+                            "user" => locus.messages.push(Message::user(message.content)),
+                            "assistant" => locus.messages.push(Message::agent(message.content)),
                             _ => {}
                         }
                     }
-                    engine.session_id = selected_id;
-                    engine.session_name = selected_title;
+                    locus.session_id = selected_id;
+                    locus.session_name = selected_title;
                     app_state.history_mode = false;
                     app_state.history_sessions = vec![];
                     app_state.history_cursor = 0;

@@ -1,6 +1,6 @@
 use crate::tui::TuiAppState;
 use crate::tui::tui_models::ActiveOperation;
-use shadow_core::engine::Locus;
+use shadow_core::locus::Locus;
 use shadow_continuity::mind::ShadowMind;
 use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
@@ -11,20 +11,20 @@ use crate::tui::app::handlers::handle_action_ingest;
 pub async fn process_channels(
     rx: &mut mpsc::UnboundedReceiver<String>, done_streaming_rx: &mut mpsc::UnboundedReceiver<()>,
     title_rx: &mut mpsc::UnboundedReceiver<String>, app_state: &mut TuiAppState,
-    engine: &mut Locus, title_tx: mpsc::UnboundedSender<String>,
+    locus: &mut Locus, title_tx: mpsc::UnboundedSender<String>,
     reflect_rx: &mut mpsc::UnboundedReceiver<ShadowMind>,
     ingest_rx: &mut  mpsc::UnboundedReceiver::<()>
 ) -> color_eyre::Result<()> {
     while let Ok(chunk) = rx.try_recv() {
         let chunk = chunk.replace("\\n", "\n");
-        match engine.messages.last_mut() {
+        match locus.messages.last_mut() {
             Some(Message {
                 kind: MessageKind::AssistantText { text },
                 ..
             }) => {
                 text.push_str(&chunk);
             }
-            _ => engine.messages.push(Message::agent(chunk)),
+            _ => locus.messages.push(Message::agent(chunk)),
         }
         if app_state.auto_scroll {
             app_state.scroll_offset = 0;
@@ -36,9 +36,9 @@ pub async fn process_channels(
             if let Some(Message {
                 kind: MessageKind::AssistantText { text },
                 ..
-            }) = engine.messages.last()
+            }) = locus.messages.last()
             {
-                engine.on_stream_complete(&text.clone(), title_tx).await?;
+                locus.on_stream_complete(&text.clone(), title_tx).await?;
             }
             app_state.active_op = ActiveOperation::Idle;
         }
@@ -51,8 +51,8 @@ pub async fn process_channels(
 
     match title_rx.try_recv() {
         Ok(title) => {
-            engine.session_name = title.clone();
-            engine.db.update_session_title(engine.session_id, &title)?;
+            locus.session_name = title.clone();
+            locus.db.update_session_title(locus.session_id, &title)?;
         }
         Err(TryRecvError::Disconnected) => {
             tracing::error!("title generation task disconnected unexpectedly");
@@ -62,7 +62,7 @@ pub async fn process_channels(
 
     match reflect_rx.try_recv() {
         Ok(new_mind) => {
-            engine.mind = new_mind;
+            locus.mind = new_mind;
             app_state.cancel_token.cancel();
             app_state.active_op = ActiveOperation::Idle;
         }
@@ -75,7 +75,7 @@ pub async fn process_channels(
     }
 
     if ingest_rx.try_recv().is_ok() {
-        handle_action_ingest(app_state, engine);
+        handle_action_ingest(app_state, locus);
     }
     
     Ok(())

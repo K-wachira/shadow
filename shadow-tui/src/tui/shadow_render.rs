@@ -10,7 +10,7 @@ use ratatui::Frame;
 use ratatui::layout::Constraint;
 use ratatui::layout::Direction;
 use ratatui::layout::Layout;
-use shadow_core::engine::Locus;
+use shadow_core::locus::Locus;
 // ─── Root render ─────────────────────────────────────────────────────────────
 
 /// Call once per frame from your event loop.

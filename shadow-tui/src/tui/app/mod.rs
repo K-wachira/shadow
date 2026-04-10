@@ -9,7 +9,7 @@ use crate::tui::render;
 use crossterm::event::Event;
 use crossterm::event::{self};
 use ratatui::DefaultTerminal;
-use shadow_core::engine::Locus;
+use shadow_core::locus::Locus;
 use shadow_continuity::mind::ShadowMind;
 use shadow_core::model::AssistantState;
 use std::time::Duration;

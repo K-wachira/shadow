@@ -12,7 +12,7 @@ use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::Paragraph;
-use shadow_core::engine::Locus;
+use shadow_core::locus::Locus;
 
 pub fn render_bottom_pane(
     f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus,

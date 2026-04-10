@@ -33,7 +33,7 @@ use ratatui::widgets::Clear;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Widget;
 use ratatui::widgets::Wrap;
-use shadow_core::engine::Locus;
+use shadow_core::locus::Locus;
 use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 use shadow_core::model::ToolCall;

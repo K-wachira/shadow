@@ -2,7 +2,7 @@ pub mod ask;
 pub mod commands;
 pub mod config;
 pub mod db;
-pub mod engine;
+pub mod locus;
 pub mod json_tree;
 pub mod llm;
 pub mod model;
