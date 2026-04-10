@@ -18,8 +18,6 @@ use shadow_continuity::mind::ShadowMind;
 use shadow_continuity::mind;
 use crate::locus::mind_op;
 
-const LOG_LIMIT: i32 = 30;
-
 pub struct Locus {
     pub db: Arc<Database>,
     pub llm_client: Arc<LlmClient>,
@@ -93,40 +91,6 @@ impl Locus {
             }
         };
         Ok(stream)
-    }
-
-    // called from main thread — fetches logs before spawning
-    pub fn gather_reflect_input(&mut self) ->  color_eyre::Result<String> {
-        let logs = &self.db.get_logs(Some(LOG_LIMIT))?;
-        let logs_json = serde_json::to_string_pretty(&logs)?;
-        Ok(logs_json)
-    }
-
-    // spawnable — no db access
-    pub async fn reflect_with_input( &mut self ) ->  color_eyre::Result<ShadowMind> {
-        let skill = std::fs::read_to_string(&self.paths.mind_skill)?;
-        let logs_json = &self.gather_reflect_input()?;
-        let messages = vec![
-            ChatMessage {
-                role: "system".into(),
-                content: skill,
-                ..ChatMessage::default()
-            },
-            ChatMessage::user(format!(
-                "--- Current shadow.mind ---\n{{&self.current_mind}}\n\n--- Recent Logs ---\n{logs_json}\n\n---\nProduce the new shadow.mind. Output raw JSON5 only. No markdown. No explanation."
-            )),
-        ];
-
-        let response = &self.llm_client
-            .llm_ask(&messages)
-            .await
-            .map_err(|e| color_eyre::eyre::eyre!(e))?;
-    
-        let new_mind: ShadowMind = json5::from_str(&response)
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to parse shadow.mind: {}", e))?;
-    
-        mind::save(&new_mind, &self.paths.mind)?;
-        Ok(new_mind)
     }
 
     pub async fn on_stream_complete(

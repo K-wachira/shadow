@@ -20,6 +20,7 @@ use std::time::Instant;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use shadow_core::locus::process_ingested_logs;
+use shadow_core::locus::gather_reflect_input;
 use shadow_core::locus::reflect;
 
 #[derive(Clone, Copy)]
@@ -254,7 +255,7 @@ async fn handle_action_reflect(
     locus: &mut Locus,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<()> {
-    let logs_json = locus.gather_reflect_input()?;
+    let logs_json = gather_reflect_input(&locus.db)?;
     let llm_client = Arc::clone(&locus.llm_client);
     let paths = locus.paths.clone();
     let current_mind = locus.mind.clone();
