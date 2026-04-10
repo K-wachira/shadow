@@ -1,7 +1,6 @@
-use shadow_utils::utils::format_timestamp;
+use shadow_utils::utils;
 use crate::mind::mind_model::Meta;
 use crate::mind::mind_model::ShadowMind;
-use chrono::Utc;
 use color_eyre::Result;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -28,7 +27,7 @@ pub fn init() -> ShadowMind {
     ShadowMind {
         meta: Meta {
             version: 1,
-            last_updated: today(),
+            last_updated: utils::today(),
             log_range: None,
             total_logs_considered: 0,
             rewrite_trigger: String::from("init"),
@@ -40,6 +39,3 @@ pub fn init() -> ShadowMind {
     }
 }
 
-pub fn today() -> String {
-    format_timestamp(Utc::now().timestamp_millis().to_string().as_ref())
-}

@@ -1,3 +1,5 @@
+use chrono::Utc;
+
 // ─── Utility ─────────────────────────────────────────────────────────────────
 pub fn truncate(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
@@ -32,4 +34,8 @@ pub fn format_duration(secs: &u64) -> String {
         (0, m, s) => format!("{}m {}s", m, s),
         (h, m, s) => format!("{}h {}m {}s", h, m, s),
     }
+}
+
+pub fn today() -> String {
+    format_timestamp(Utc::now().timestamp_millis().to_string().as_ref())
 }
