@@ -19,6 +19,8 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
+use shadow_core::locus::process_ingested_logs;
+use shadow_core::locus::reflect;
 
 #[derive(Clone, Copy)]
 #[derive(Debug)]
@@ -238,7 +240,7 @@ pub fn handle_action_ingest(app_state: &mut TuiAppState, locus: &mut Locus) {
                 let mind_path = locus.paths.mind.clone();
 
                 tokio::spawn(async move {
-                    Locus::process_ingested_logs(logs, mind, llm, mind_path).await;
+                    process_ingested_logs(logs, mind, llm, mind_path).await;
                 });
             }
         }
@@ -263,7 +265,7 @@ async fn handle_action_reflect(
 
     tokio::spawn(async move {
         tokio::select! {
-            result = Locus::reflect(llm_client, paths, current_mind, logs_json) => {
+            result = reflect(llm_client, paths, current_mind, logs_json) => {
                 match result {
                     Ok(new_mind) => { let _ = reflect_tx.send(new_mind); }
                     Err(e) => tracing::error!("reflect error: {}", e),
