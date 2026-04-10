@@ -7,6 +7,8 @@ use std::path::PathBuf;
 use shadow_continuity::mind::ShadowMind;
 use shadow_continuity::mind;
 use shadow_continuity::mind::Belief;
+use crate::db::Database;
+use shadow_services::ingest::get_files;
 
 pub async fn reflect(
     llm_client: Arc<LlmClient>,
@@ -44,7 +46,6 @@ pub async fn reflect(
     let new_mind: ShadowMind = json5::from_str(&full)
         .map_err(|e| color_eyre::eyre::eyre!("Failed to parse shadow.mind: {e}\nRaw:\n{full}"))?;
 
-    tracing::error!("raw reflect response: {:?}", new_mind);
     mind::save(&new_mind, &paths.mind)?;
     Ok(new_mind)
 }
@@ -129,4 +130,36 @@ pub async fn update_belief(
         .trim();
 
     Ok(serde_json::from_str(clean)?)
+}
+
+
+pub fn ingest_icloud_logs(
+    db: &Database,
+    source_path: &PathBuf,
+) -> color_eyre::Result<Vec<EntryLog>> {
+    let mut ingested = vec![];
+    let expanded_path = dirs::home_dir()
+        .map(|h| {
+            PathBuf::from(
+                &source_path.to_string_lossy()
+                    .replacen("~", &h.to_string_lossy(), 1),
+            )
+        })
+        .unwrap_or_else(|| source_path.to_path_buf());
+
+    match get_files(&expanded_path) {
+        Ok(files) => {
+            for file_name in files {
+                if !file_name.contains(".json") || file_name.starts_with('.') {
+                    continue;
+                }
+                if let Ok(Some(log)) = db.insert_file_ingest(&file_name, &expanded_path) {
+                    ingested.push(log);
+                }
+            }
+        }
+        Err(e) => tracing::error!("Log ingestion failed: {}", e),
+    }
+
+    Ok(ingested)
 }
