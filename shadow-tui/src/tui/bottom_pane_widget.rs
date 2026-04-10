@@ -12,10 +12,10 @@ use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::Paragraph;
-use shadow_core::engine::ShadowEngine;
+use shadow_core::engine::Locus;
 
 pub fn render_bottom_pane(
-    f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine,
+    f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus,
 ) {
     if tui_state.slash_mode {
         render_slash_picker(f, area, tui_state);
@@ -23,9 +23,9 @@ pub fn render_bottom_pane(
     }
 
     // normal statusbar
-    let left = format!("~ {}", shadow_engine.session_name);
+    let left = format!("~ {}", locus.session_name);
 
-    let right = format!("{}  100% left", &shadow_engine.llm_client.model_name);
+    let right = format!("{}  100% left", &locus.llm_client.model_name);
     let padding = area.width.saturating_sub((left.len() + right.len()) as u16);
 
     let line = Line::from(vec![

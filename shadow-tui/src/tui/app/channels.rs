@@ -1,6 +1,6 @@
 use crate::tui::TuiAppState;
 use crate::tui::tui_models::ActiveOperation;
-use shadow_core::engine::ShadowEngine;
+use shadow_core::engine::Locus;
 use shadow_continuity::mind::ShadowMind;
 use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
@@ -11,7 +11,7 @@ use crate::tui::app::handlers::handle_action_ingest;
 pub async fn process_channels(
     rx: &mut mpsc::UnboundedReceiver<String>, done_streaming_rx: &mut mpsc::UnboundedReceiver<()>,
     title_rx: &mut mpsc::UnboundedReceiver<String>, app_state: &mut TuiAppState,
-    engine: &mut ShadowEngine, title_tx: mpsc::UnboundedSender<String>,
+    engine: &mut Locus, title_tx: mpsc::UnboundedSender<String>,
     reflect_rx: &mut mpsc::UnboundedReceiver<ShadowMind>,
     ingest_rx: &mut  mpsc::UnboundedReceiver::<()>
 ) -> color_eyre::Result<()> {

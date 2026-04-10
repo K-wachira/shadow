@@ -7,7 +7,7 @@ use crate::tui::ensure_memory_cursor_visible;
 use crate::tui::tui_models::ActiveOperation;
 use crossterm::event::KeyCode;
 use json5::from_str;
-use shadow_core::engine::ShadowEngine;
+use shadow_core::engine::Locus;
 use shadow_core::json_tree::JsonTree;
 use shadow_continuity::mind::ShadowMind;
 use shadow_core::model::Message;
@@ -51,7 +51,7 @@ impl SlashAction {
 }
 
 pub async fn handle_key_slash(
-    key: KeyCode, app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
+    key: KeyCode, app_state: &mut TuiAppState, engine: &mut Locus, input_buf: &mut String,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<bool> {
     let max = SLASH_COMMANDS.len().saturating_sub(1);
@@ -101,7 +101,7 @@ fn handle_backspace(app_state: &mut TuiAppState, input_buf: &mut String) {
 }
 
 async fn handle_enter(
-    app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
+    app_state: &mut TuiAppState, engine: &mut Locus, input_buf: &mut String,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<bool> {
     let command = selected_command(app_state).unwrap_or("");
@@ -115,7 +115,7 @@ async fn handle_enter(
 }
 
 pub async fn handle_pending_confirm_key(
-    key: KeyCode, app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
+    key: KeyCode, app_state: &mut TuiAppState, engine: &mut Locus, input_buf: &mut String,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<bool> {
     let Some(pending) = app_state.pending_confirm.as_ref() else {
@@ -155,7 +155,7 @@ fn reset_slash_picker(app_state: &mut TuiAppState, input_buf: &mut String) {
 }
 
 async fn run_action(
-    action: SlashAction, app_state: &mut TuiAppState, engine: &mut ShadowEngine,
+    action: SlashAction, app_state: &mut TuiAppState, engine: &mut Locus,
     input_buf: &mut String, reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<bool> {
     match action {
@@ -195,7 +195,7 @@ fn action_from_confirm(action: PendingConfirmAction) -> SlashAction {
     }
 }
 
-fn handle_action_new(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
+fn handle_action_new(app_state: &mut TuiAppState, engine: &mut Locus) {
     if engine.messages.len() > 1 {
         engine.start_new_session();
         app_state.auto_scroll = true;
@@ -204,13 +204,13 @@ fn handle_action_new(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
     }
 }
 
-fn handle_action_delete(engine: &mut ShadowEngine) -> color_eyre::Result<()> {
+fn handle_action_delete(engine: &mut Locus) -> color_eyre::Result<()> {
     engine.delete_current_session()?;
     engine.messages = engine.messages.clone();
     Ok(())
 }
 
-fn handle_action_history(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
+fn handle_action_history(app_state: &mut TuiAppState, engine: &mut Locus) {
     if let Ok(sessions) = engine.list_sessions(30) {
         app_state.history_sessions = sessions;
         app_state.history_mode = true;
@@ -219,7 +219,7 @@ fn handle_action_history(app_state: &mut TuiAppState, engine: &mut ShadowEngine)
     }
 }
 
-pub fn handle_action_ingest(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
+pub fn handle_action_ingest(app_state: &mut TuiAppState, engine: &mut Locus) {
     app_state.active_op = ActiveOperation::Ingesting(Instant::now());
     match engine.ingest_icloud_logs() {
         Ok(logs) => {
@@ -238,7 +238,7 @@ pub fn handle_action_ingest(app_state: &mut TuiAppState, engine: &mut ShadowEngi
                 let mind_path = engine.paths.mind.clone();
 
                 tokio::spawn(async move {
-                    ShadowEngine::process_ingested_logs(logs, mind, llm, mind_path).await;
+                    Locus::process_ingested_logs(logs, mind, llm, mind_path).await;
                 });
             }
         }
@@ -249,7 +249,7 @@ pub fn handle_action_ingest(app_state: &mut TuiAppState, engine: &mut ShadowEngi
 
 async fn handle_action_reflect(
     app_state: &mut TuiAppState,
-    engine: &mut ShadowEngine,
+    engine: &mut Locus,
     reflect_tx: mpsc::UnboundedSender<ShadowMind>,
 ) -> color_eyre::Result<()> {
     let logs_json = engine.gather_reflect_input()?;
@@ -263,7 +263,7 @@ async fn handle_action_reflect(
 
     tokio::spawn(async move {
         tokio::select! {
-            result = ShadowEngine::reflect(llm_client, paths, current_mind, logs_json) => {
+            result = Locus::reflect(llm_client, paths, current_mind, logs_json) => {
                 match result {
                     Ok(new_mind) => { let _ = reflect_tx.send(new_mind); }
                     Err(e) => tracing::error!("reflect error: {}", e),
@@ -278,7 +278,7 @@ async fn handle_action_reflect(
 }
 
 fn handle_action_rename(
-    app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
+    app_state: &mut TuiAppState, engine: &mut Locus, input_buf: &mut String,
 ) {
     app_state.rename_mode = true;
     input_buf.clear();
@@ -286,7 +286,7 @@ fn handle_action_rename(
     app_state.rename_mode = false;
 }
 
-fn handle_action_memory(app_state: &mut TuiAppState, engine: &mut ShadowEngine) {
+fn handle_action_memory(app_state: &mut TuiAppState, engine: &mut Locus) {
     let path = engine.paths.mind.clone();
     let expanded = true;
     match read_to_string(&path) {

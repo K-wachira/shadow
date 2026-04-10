@@ -22,7 +22,7 @@ use shadow_continuity::mind::Belief;
 
 const LOG_LIMIT: i32 = 30;
 
-pub struct ShadowEngine {
+pub struct Locus {
     pub db: Arc<Database>,
     pub llm_client: Arc<LlmClient>,
     pub session_id: i64,
@@ -34,7 +34,7 @@ pub struct ShadowEngine {
     pub paths: ShadowPaths,
 }
 
-impl ShadowEngine {
+impl Locus {
     pub fn new(
         db: Arc<Database>, llm_client: Arc<LlmClient>, config: Config, paths: ShadowPaths,
     ) -> color_eyre::Result<Self> {
@@ -287,7 +287,7 @@ impl ShadowEngine {
         mind_path: PathBuf,
     ) {
         for log in logs {
-            match ShadowEngine::extract_affected_fields(&mind, &log, &llm).await {
+            match Locus::extract_affected_fields(&mind, &log, &llm).await {
                 Ok(fields) => {
                     let mut updated_mind = mind.clone();
                     for field_path in fields {
@@ -304,7 +304,7 @@ impl ShadowEngine {
                         };
 
                         if let Some(current) = belief {
-                            match ShadowEngine::update_belief(&field_path, &current, &log, &llm).await {
+                            match Locus::update_belief(&field_path, &current, &log, &llm).await {
                                 Ok(updated) => {
                                     match layer {
                                         "surface" => { updated_mind.surface.insert(key.to_string(), updated); }
@@ -369,7 +369,7 @@ impl ShadowEngine {
 //     use ollama_rs::Ollama;
 //     use crate::llm::LlmProvider;
 
-//     fn test_engine() -> ShadowEngine {
+//     fn test_engine() -> Locus {
 //         let db = Arc::new(Database::new(":memory:").expect("in-memory db"));
 //         // LlmClient::init() only stores a URL — no actual connection is made here.
 //         //
@@ -385,7 +385,7 @@ impl ShadowEngine {
 //             LlmClient::init(provider, model).await
 //                 .map_err(|e| color_eyre::eyre::eyre!(e)).unwrap()
 //         );
-//         ShadowEngine::new(db, llm_client, "test-model").expect("engine init")
+//         Locus::new(db, llm_client, "test-model").expect("engine init")
 //     }
 
 //     // ── Construction ──────────────────────────────────────────────────────────

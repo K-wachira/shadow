@@ -6,7 +6,7 @@ use ratatui::Terminal;
 use ratatui::TerminalOptions;
 use ratatui::Viewport;
 use ratatui::backend::CrosstermBackend;
-use shadow_core::engine::ShadowEngine;
+use shadow_core::engine::Locus;
 use shadow_core::setup;
 use shadow_core::*;
 use std::env;
@@ -36,7 +36,7 @@ async fn cli_main() -> color_eyre::Result<()> {
 
     let llm_client = Arc::new(LlmClient::init(&config)?);
 
-    let mut shadow_engine = ShadowEngine::new(db_conn, llm_client, config, paths)?;
+    let mut locus = Locus::new(db_conn, llm_client, config, paths)?;
 
     crossterm::terminal::enable_raw_mode()?;
     let terminal_height = crossterm::terminal::size()?.1;
@@ -47,7 +47,7 @@ async fn cli_main() -> color_eyre::Result<()> {
         TerminalOptions { viewport },
     )?;
 
-    let result = run(terminal, &mut shadow_engine).await;
+    let result = run(terminal, &mut locus).await;
     crossterm::terminal::disable_raw_mode()?;
     result?;
 

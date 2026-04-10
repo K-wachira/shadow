@@ -5,7 +5,7 @@ use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyModifiers;
 use json5::from_str;
-use shadow_core::engine::ShadowEngine;
+use shadow_core::engine::Locus;
 use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 use std::path::Path;
@@ -16,7 +16,7 @@ use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 pub async fn handle_key_normal(
-    key: KeyEvent, app_state: &mut TuiAppState, engine: &mut ShadowEngine, input_buf: &mut String,
+    key: KeyEvent, app_state: &mut TuiAppState, engine: &mut Locus, input_buf: &mut String,
     tx: mpsc::UnboundedSender<String>, done_tx: mpsc::UnboundedSender<()>,
 ) -> color_eyre::Result<bool> {
     if let Some(focus_idx) = app_state.memory_focus {

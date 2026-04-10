@@ -1,10 +1,10 @@
 use crate::tui::TuiAppState;
 use crossterm::event::KeyCode;
-use shadow_core::engine::ShadowEngine;
+use shadow_core::engine::Locus;
 use shadow_core::model::Message;
 
 pub fn handle_key_history(
-    key: KeyCode, app_state: &mut TuiAppState, engine: &mut ShadowEngine,
+    key: KeyCode, app_state: &mut TuiAppState, engine: &mut Locus,
 ) -> color_eyre::Result<bool> {
     match key {
         KeyCode::Esc => {

@@ -1,12 +1,12 @@
 use crate::tui::TuiAppState;
 use crate::tui::ensure_memory_cursor_visible;
 use crossterm::event::MouseEvent;
-use shadow_core::engine::ShadowEngine;
+use shadow_core::engine::Locus;
 use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 
 pub fn handle_mouse(
-    mouse: MouseEvent, app_state: &mut TuiAppState, engine: &mut ShadowEngine,
+    mouse: MouseEvent, app_state: &mut TuiAppState, engine: &mut Locus,
 ) -> color_eyre::Result<()> {
     if let Some(focus_idx) = app_state.memory_focus {
         if let Some(Message {

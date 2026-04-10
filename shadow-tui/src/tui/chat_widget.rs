@@ -33,7 +33,7 @@ use ratatui::widgets::Clear;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Widget;
 use ratatui::widgets::Wrap;
-use shadow_core::engine::ShadowEngine;
+use shadow_core::engine::Locus;
 use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 use shadow_core::model::ToolCall;
@@ -47,42 +47,42 @@ enum Segment {
 }
 
 pub fn render_chat(
-    f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine,
+    f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus,
 ) {
     if tui_state.history_mode {
-        render_session_list(f, area, tui_state, shadow_engine);
+        render_session_list(f, area, tui_state, locus);
         return;
     }
 
     f.render_widget(Clear, area);
 
-    let segments = build_segments(shadow_engine, tui_state, area);
+    let segments = build_segments(locus, tui_state, area);
     let total_rows = total_segment_rows(&segments, area.width);
     let visible_top = visible_top(total_rows, area.height as usize, tui_state);
     render_chat_slice(
         f.buffer_mut(),
         area,
         tui_state,
-        shadow_engine,
+        locus,
         &segments,
         visible_top,
     );
 }
 
 pub fn persist_chat_scrollback(
-    terminal: &mut DefaultTerminal, tui_state: &mut TuiAppState, shadow_engine: &mut ShadowEngine,
+    terminal: &mut DefaultTerminal, tui_state: &mut TuiAppState, locus: &mut Locus,
 ) -> std::io::Result<()> {
-    sync_chat_scrollback(terminal, tui_state, shadow_engine, false)
+    sync_chat_scrollback(terminal, tui_state, locus, false)
 }
 
 pub fn flush_chat_transcript(
-    terminal: &mut DefaultTerminal, tui_state: &mut TuiAppState, shadow_engine: &mut ShadowEngine,
+    terminal: &mut DefaultTerminal, tui_state: &mut TuiAppState, locus: &mut Locus,
 ) -> std::io::Result<()> {
-    sync_chat_scrollback(terminal, tui_state, shadow_engine, true)
+    sync_chat_scrollback(terminal, tui_state, locus, true)
 }
 
 pub fn ensure_memory_cursor_visible(
-    tui_state: &mut TuiAppState, shadow_engine: &ShadowEngine,
+    tui_state: &mut TuiAppState, locus: &Locus,
 ) -> color_eyre::Result<()> {
     let Some(focus_idx) = tui_state.memory_focus else {
         return Ok(());
@@ -99,12 +99,12 @@ pub fn ensure_memory_cursor_visible(
     }
 
     let Some(target_row) =
-        memory_cursor_row(focus_idx, shadow_engine, tui_state.tick, chat_area.width, total_area)
+        memory_cursor_row(focus_idx, locus, tui_state.tick, chat_area.width, total_area)
     else {
         return Ok(());
     };
 
-    let segments = build_segments(shadow_engine, tui_state, total_area);
+    let segments = build_segments(locus, tui_state, total_area);
     let total_rows = total_segment_rows(&segments, chat_area.width);
     let viewport_rows = chat_area.height as usize;
     let max_scroll = total_rows.saturating_sub(viewport_rows);
@@ -126,7 +126,7 @@ pub fn ensure_memory_cursor_visible(
 }
 
 fn sync_chat_scrollback(
-    terminal: &mut DefaultTerminal, tui_state: &mut TuiAppState, shadow_engine: &mut ShadowEngine,
+    terminal: &mut DefaultTerminal, tui_state: &mut TuiAppState, locus: &mut Locus,
     include_visible_viewport: bool,
 ) -> std::io::Result<()> {
     if tui_state.history_mode {
@@ -152,7 +152,7 @@ fn sync_chat_scrollback(
         tui_state.persisted_chat_width = chat_area.width;
     }
 
-    let segments = build_segments(shadow_engine, tui_state, total_area);
+    let segments = build_segments(locus, tui_state, total_area);
     let total_rows = total_segment_rows(&segments, chat_area.width);
     let persisted_target = if include_visible_viewport {
         total_rows
@@ -170,7 +170,7 @@ fn sync_chat_scrollback(
     while pending_rows > 0 {
         let chunk_rows = pending_rows.min(u16::MAX as usize) as u16;
         terminal.insert_before(chunk_rows, |buf| {
-            render_chat_slice(buf, buf.area, tui_state, shadow_engine, &segments, next_row);
+            render_chat_slice(buf, buf.area, tui_state, locus, &segments, next_row);
         })?;
         next_row += chunk_rows as usize;
         pending_rows -= chunk_rows as usize;
@@ -180,10 +180,10 @@ fn sync_chat_scrollback(
     Ok(())
 }
 
-fn build_segments(shadow_engine: &ShadowEngine, tui_state: &TuiAppState, total_area: Rect,) -> Vec<Segment> {
+fn build_segments(locus: &Locus, tui_state: &TuiAppState, total_area: Rect,) -> Vec<Segment> {
     let mut segments = Vec::new();
 
-    for (msg_idx, msg) in shadow_engine.messages.iter().enumerate() {
+    for (msg_idx, msg) in locus.messages.iter().enumerate() {
         match &msg.kind {
             MessageKind::MemoryTree(tree) => {
                 let lines = tree_to_lines(
@@ -208,11 +208,11 @@ fn build_segments(shadow_engine: &ShadowEngine, tui_state: &TuiAppState, total_a
 }
 
 fn memory_cursor_row(
-    focus_idx: usize, shadow_engine: &ShadowEngine, tick: u64, available_width: u16,total_area: Rect,
+    focus_idx: usize, locus: &Locus, tick: u64, available_width: u16,total_area: Rect,
 ) -> Option<usize> {
     let mut row = 0usize;
 
-    for (msg_idx, message) in shadow_engine.messages.iter().enumerate() {
+    for (msg_idx, message) in locus.messages.iter().enumerate() {
         match &message.kind {
             MessageKind::MemoryTree(tree) => {
                 if msg_idx == focus_idx {
@@ -234,7 +234,7 @@ fn memory_cursor_row(
 }
 
 fn render_chat_slice(
-    buf: &mut Buffer, area: Rect, _tui_state: &TuiAppState, _shadow_engine: &mut ShadowEngine,
+    buf: &mut Buffer, area: Rect, _tui_state: &TuiAppState, _locus: &mut Locus,
     segments: &[Segment], start_row: usize,
 ) {
     let mut virtual_y = 0usize;
@@ -404,9 +404,9 @@ fn message_to_lines(msg: &Message, tick: u64, total_area: Rect,) -> Vec<Line<'st
 }
 
 fn render_session_list(
-    f: &mut Frame, area: Rect, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine,
+    f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus,
 ) {
-    let history_sessions = match shadow_engine.list_sessions(30) {
+    let history_sessions = match locus.list_sessions(30) {
         Ok(sessions) => sessions,
         Err(e) => {
             let line = Line::from(Span::styled(

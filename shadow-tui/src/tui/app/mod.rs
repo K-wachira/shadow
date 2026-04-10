@@ -9,7 +9,7 @@ use crate::tui::render;
 use crossterm::event::Event;
 use crossterm::event::{self};
 use ratatui::DefaultTerminal;
-use shadow_core::engine::ShadowEngine;
+use shadow_core::engine::Locus;
 use shadow_continuity::mind::ShadowMind;
 use shadow_core::model::AssistantState;
 use std::time::Duration;
@@ -27,7 +27,7 @@ use self::state::update_tick;
 use shadow_services::ingest::get_files;
 
 pub async fn run(
-    mut terminal: DefaultTerminal, shadow_engine: &mut ShadowEngine,
+    mut terminal: DefaultTerminal, locus: &mut Locus,
 ) -> color_eyre::Result<()> {
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
     let (done_tx, mut done_streaming_rx) = mpsc::unbounded_channel::<()>();
@@ -39,7 +39,7 @@ pub async fn run(
     
     // spawn watcher once
     start_ingest_watcher(
-        shadow_engine.config.ingest.source_path.clone(),
+        locus.config.ingest.source_path.clone(),
         ingest_tx,
     );
 
@@ -50,7 +50,7 @@ pub async fn run(
             &mut done_streaming_rx,
             &mut title_rx,
             &mut app_state,
-            shadow_engine,
+            locus,
             title_tx.clone(),
             &mut reflect_rx,
             &mut ingest_rx,
@@ -60,9 +60,9 @@ pub async fn run(
         update_tick(&mut app_state);
         update_assistant_state(&mut app_state);
         sync_input_state(&mut app_state, &input_buf);
-        persist_chat_scrollback(&mut terminal, &mut app_state, shadow_engine)?;
+        persist_chat_scrollback(&mut terminal, &mut app_state, locus)?;
 
-        if let Err(e) = terminal.draw(|f| render(f, &app_state, shadow_engine)) {
+        if let Err(e) = terminal.draw(|f| render(f, &app_state, locus)) {
             if !e.to_string().contains("cursor position") {
                 return Err(e.into());
             }
@@ -78,7 +78,7 @@ pub async fn run(
                     handle_pending_confirm_key(
                         key.code,
                         &mut app_state,
-                        shadow_engine,
+                        locus,
                         &mut input_buf,
                         reflect_tx.clone(),
                     )
@@ -87,18 +87,18 @@ pub async fn run(
                     handle_key_slash(
                         key.code,
                         &mut app_state,
-                        shadow_engine,
+                        locus,
                         &mut input_buf,
                         reflect_tx.clone(),
                     )
                     .await?
                 } else if app_state.history_mode {
-                    handle_key_history(key.code, &mut app_state, shadow_engine)?
+                    handle_key_history(key.code, &mut app_state, locus)?
                 } else {
                     handle_key_normal(
                         key,
                         &mut app_state,
-                        shadow_engine,
+                        locus,
                         &mut input_buf,
                         tx.clone(),
                         done_tx.clone(),
@@ -107,7 +107,7 @@ pub async fn run(
                 }
             }
             Event::Mouse(mouse) => {
-                handle_mouse(mouse, &mut app_state, shadow_engine)?;
+                handle_mouse(mouse, &mut app_state, locus)?;
                 false
             }
             Event::Resize(..) => {
@@ -124,8 +124,8 @@ pub async fn run(
         }
     }
 
-    flush_chat_transcript(&mut terminal, &mut app_state, shadow_engine)?;
-    let _ = shadow_engine.end_session();
+    flush_chat_transcript(&mut terminal, &mut app_state, locus)?;
+    let _ = locus.end_session();
     app_state.assistant_state = AssistantState::Idle;
     Ok(())
 }

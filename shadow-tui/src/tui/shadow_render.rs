@@ -10,11 +10,11 @@ use ratatui::Frame;
 use ratatui::layout::Constraint;
 use ratatui::layout::Direction;
 use ratatui::layout::Layout;
-use shadow_core::engine::ShadowEngine;
+use shadow_core::engine::Locus;
 // ─── Root render ─────────────────────────────────────────────────────────────
 
 /// Call once per frame from your event loop.
-pub fn render(f: &mut Frame, tui_state: &TuiAppState, shadow_engine: &mut ShadowEngine) {
+pub fn render(f: &mut Frame, tui_state: &TuiAppState, locus: &mut Locus) {
     // Layout — fixed rows from bottom, history fills the rest:
     //
     //  ┌──────────────────────────────────┐
@@ -47,9 +47,9 @@ pub fn render(f: &mut Frame, tui_state: &TuiAppState, shadow_engine: &mut Shadow
         ])
         .split(f.area());
 
-    render_chat(f, chunks[0], tui_state, shadow_engine);
+    render_chat(f, chunks[0], tui_state, locus);
     render_status_line(f, chunks[1], tui_state);
     // render_yolo_hint(f, chunks[2], tui_state);
     render_input(f, chunks[3], tui_state);
-    render_bottom_pane(f, chunks[4], tui_state, shadow_engine);
+    render_bottom_pane(f, chunks[4], tui_state, locus);
 }
