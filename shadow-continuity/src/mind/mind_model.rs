@@ -29,6 +29,8 @@ pub struct LogRange {
 pub struct Belief {
     pub value: String,
     pub confidence: f32,
+    pub source_logs: Vec<String>,
+    pub last_updated: String,
     pub operations: Vec<Operation>,
 }
 
