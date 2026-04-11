@@ -1,20 +1,11 @@
 use crate::tui::SLASH_COMMANDS;
 use crate::tui::TuiAppState;
-use crate::tui::bright_bold;
 use crate::tui::composer_height;
-use crate::tui::default;
-use crate::tui::dim;
-use crate::tui::error_style;
 use crate::tui::logo_lines;
 use crate::tui::markdown_to_lines;
-use crate::tui::muted;
-use crate::tui::sentinel_assistant_styles;
-use crate::tui::sentinel_user_bg_styles;
-use crate::tui::sentinel_user_styles;
 use crate::tui::tree_cursor_screen_row;
 use crate::tui::tree_render_height;
 use crate::tui::tree_to_lines;
-use crate::tui::very_dim;
 use ratatui::DefaultTerminal;
 use ratatui::Frame;
 use ratatui::buffer::Buffer;
@@ -40,6 +31,7 @@ use shadow_core::model::ToolCall;
 use shadow_core::model::ToolState;
 use shadow_utils::utils::format_timestamp;
 use shadow_utils::utils::truncate;
+use shadow_utils::color;
 
 #[derive(Clone)]
 enum Segment {
@@ -372,20 +364,20 @@ fn message_to_lines(msg: &Message, tick: u64, total_area: Rect) -> Vec<Line<'sta
             let blank = " ".repeat(total_area.width as usize);
 
             let line = Line::from(vec![
-                Span::styled(sentinel, sentinel_user_styles()),
-                Span::styled(text.clone(), sentinel_user_bg_styles()),
-                Span::styled(padding, sentinel_user_bg_styles()),
+                Span::styled(sentinel, color::sentinel_user_styles()),
+                Span::styled(text.clone(), color::sentinel_user_bg_styles()),
+                Span::styled(padding, color::sentinel_user_bg_styles()),
             ]);
             vec![
-                Line::from(Span::styled(blank.clone(), sentinel_user_bg_styles())),
+                Line::from(Span::styled(blank.clone(), color::sentinel_user_bg_styles())),
                 line,
-                Line::from(Span::styled(blank.clone(), sentinel_user_bg_styles())),
+                Line::from(Span::styled(blank.clone(), color::sentinel_user_bg_styles())),
             ]
         }
 
         MessageKind::AssistantThought { text } => vec![Line::from(vec![
             Span::styled(format!("{}+  ", pad), Style::default().fg(Color::Blue)),
-            Span::styled(text.clone(), default()),
+            Span::styled(text.clone(), color::default()),
         ])],
 
         MessageKind::AssistantText { text } => {
@@ -394,7 +386,7 @@ fn message_to_lines(msg: &Message, tick: u64, total_area: Rect) -> Vec<Line<'sta
             if let Some(first) = lines.first_mut() {
                 first.spans.insert(
                     0,
-                    Span::styled(format!("{}● ", pad), sentinel_assistant_styles()),
+                    Span::styled(format!("{}● ", pad), color::sentinel_assistant_styles()),
                 );
             }
             lines
@@ -411,7 +403,7 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus
         Err(e) => {
             let line = Line::from(Span::styled(
                 format!("  failed to load sessions: {}", e),
-                error_style(),
+                color::error_style(),
             ));
             f.render_widget(Paragraph::new(line), area);
             return;
@@ -419,7 +411,7 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus
     };
 
     if history_sessions.is_empty() {
-        let line = Line::from(Span::styled("  no sessions found", dim()));
+        let line = Line::from(Span::styled("  no sessions found", color::dim()));
         f.render_widget(Paragraph::new(line), area);
         return;
     }
@@ -458,7 +450,7 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus
                             title,
                             format_timestamp(&session.created_at_ms.to_string())
                         ),
-                        dim(),
+                        color::dim(),
                     ),
                 ])
             }
@@ -472,7 +464,7 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus
                 .border_style(Style::default().fg(Color::DarkGray))
                 .title(Span::styled(
                     " sessions  (↑↓ or j/k to navigate · Enter to load · Esc to cancel) ",
-                    dim(),
+                    color::dim(),
                 )),
         ),
         area,
@@ -496,13 +488,13 @@ fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {
                     format!("{}{}  ", pad, sp),
                     Style::default().fg(Color::Yellow),
                 ),
-                Span::styled(tool.name.to_owned(), bright_bold()),
-                Span::styled("  (ctrl+f to focus)".to_string(), dim()),
+                Span::styled(tool.name.to_owned(), color::bright_bold()),
+                Span::styled("  (ctrl+f to focus)".to_string(), color::dim()),
             ]));
             // Show last live stdout line if streaming
             if let Some(last) = tool.output_lines.last() {
                 lines.push(Line::from(vec![
-                    Span::styled(format!("{}└  ", pad), dim()),
+                    Span::styled(format!("{}└  ", pad), color::dim()),
                     Span::styled(
                         last.to_owned(),
                         Style::default()
@@ -524,9 +516,9 @@ fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {
             };
             lines.push(Line::from(vec![
                 Span::styled(format!("{}●  ", pad), Style::default().fg(Color::Green)),
-                Span::styled(format!("{}{}", tool.name, preview), muted()),
-                Span::styled(format!("  ({} {})", n, word), dim()),
-                Span::styled("  (Ctrl+O to expand)".to_string(), very_dim()),
+                Span::styled(format!("{}{}", tool.name, preview), color::muted()),
+                Span::styled(format!("  ({} {})", n, word), color::dim()),
+                Span::styled("  (Ctrl+O to expand)".to_string(), color::very_dim()),
             ]));
         }
 
@@ -535,12 +527,12 @@ fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {
             // "└  $ mkdir -p /path"
             lines.push(Line::from(vec![
                 Span::styled(format!("{}●  ", pad), Style::default().fg(Color::Green)),
-                Span::styled(tool.name.clone(), bright_bold()),
+                Span::styled(tool.name.clone(), color::bright_bold()),
             ]));
             for output_line in &tool.output_lines {
                 lines.push(Line::from(vec![
-                    Span::styled(format!("{}└  ", pad), dim()),
-                    Span::styled(truncate(&output_line.to_owned(), 80), muted()),
+                    Span::styled(format!("{}└  ", pad), color::dim()),
+                    Span::styled(truncate(&output_line.to_owned(), 80), color::muted()),
                 ]));
             }
         }
@@ -556,8 +548,8 @@ fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {
             format!("({})", truncate(&child.args_preview, 40))
         };
         lines.push(Line::from(vec![
-            Span::styled(format!("{}└  ", pad), dim()),
-            Span::styled(format!("{}{}{}", check, child.name, preview), dim()),
+            Span::styled(format!("{}└  ", pad), color::dim()),
+            Span::styled(format!("{}{}{}", check, child.name, preview), color::dim()),
         ]));
     }
     lines

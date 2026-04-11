@@ -1,7 +1,5 @@
 use crate::tui::SLASH_COMMANDS;
 use crate::tui::TuiAppState;
-use crate::tui::bright;
-use crate::tui::dim;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
@@ -10,6 +8,7 @@ use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::Paragraph;
+use shadow_utils::color;
 
 const CURSOR_SENTINEL: char = '\u{0}';
 
@@ -62,7 +61,7 @@ fn wrapped_input_lines(available_width: u16, tui_state: &TuiAppState) -> Vec<Lin
 
     if tui_state.input.is_empty() {
         return vec![Line::from(vec![
-            Span::styled(first_prefix, dim()),
+            Span::styled(first_prefix, color::dim()),
             cursor,
             Span::raw(" "),
             Span::styled(
@@ -71,7 +70,7 @@ fn wrapped_input_lines(available_width: u16, tui_state: &TuiAppState) -> Vec<Lin
                 } else {
                     "Type your message"
                 },
-                dim(),
+                color::dim(),
             ),
         ])];
     }
@@ -135,10 +134,10 @@ fn wrap_input_chunks(content: &str, width: usize, prefix_width: usize) -> Vec<St
 fn line_from_chunk(prefix: String, chunk: String, cursor: &Span<'static>) -> Line<'static> {
     let has_cursor = chunk.contains(CURSOR_SENTINEL);
     let text = chunk.replace(CURSOR_SENTINEL, "");
-    let mut spans = vec![Span::styled(prefix, dim())];
+    let mut spans = vec![Span::styled(prefix, color::dim())];
 
     if !text.is_empty() {
-        spans.push(Span::styled(text, bright()));
+        spans.push(Span::styled(text, color::bright()));
     }
 
     if has_cursor {

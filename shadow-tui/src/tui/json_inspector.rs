@@ -1,5 +1,4 @@
-use crate::tui::default_item_style;
-use crate::tui::selected_item_style;
+use shadow_utils::color;
 use ratatui::style::Color;
 use ratatui::style::Modifier;
 use ratatui::style::Style;
@@ -95,9 +94,9 @@ pub fn tree_to_lines(tree: &JsonTree, focused: bool, editing: bool) -> Vec<Line<
         let is_cursor = focused && idx == tree.cursor;
         let indent = "  ".repeat(row.depth);
         let base_style = if is_cursor {
-            selected_item_style()
+            color::selected_item_style()
         } else {
-            default_item_style()
+            color::default_item_style()
         };
 
         let (prefix, value_text): (&str, String) = match &row.display {

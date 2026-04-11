@@ -2896,6 +2896,7 @@ name = "shadow-utils"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "ratatui",
 ]
 
 [[package]]

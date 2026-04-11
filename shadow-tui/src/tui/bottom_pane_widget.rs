@@ -1,9 +1,6 @@
 use crate::tui::SLASH_COMMANDS;
 use crate::tui::SlashCommand;
 use crate::tui::TuiAppState;
-use crate::tui::bright;
-use crate::tui::dim;
-use crate::tui::selected_item_style;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
@@ -13,6 +10,7 @@ use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::Paragraph;
 use shadow_core::locus::Locus;
+use shadow_utils::color;
 
 pub fn render_bottom_pane(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus) {
     if tui_state.slash_mode {
@@ -27,9 +25,9 @@ pub fn render_bottom_pane(f: &mut Frame, area: Rect, tui_state: &TuiAppState, lo
     let padding = area.width.saturating_sub((left.len() + right.len()) as u16);
 
     let line = Line::from(vec![
-        Span::styled(left, dim()),
+        Span::styled(left, color::dim()),
         Span::raw(" ".repeat(padding as usize)),
-        Span::styled(right, bright()),
+        Span::styled(right, color::bright()),
     ]);
 
     f.render_widget(Paragraph::new(line), area);
@@ -43,7 +41,7 @@ fn render_slash_picker(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
         .collect();
 
     if matching.is_empty() {
-        let line = Line::from(vec![Span::styled("  no matching commands", dim())]);
+        let line = Line::from(vec![Span::styled("  no matching commands", color::dim())]);
         f.render_widget(Paragraph::new(line), area);
         return;
     }
@@ -60,7 +58,7 @@ fn render_slash_picker(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
         .map(|(i, cmd)| {
             let selected = i == tui_state.slash_cursor;
             let style = if selected {
-                selected_item_style().add_modifier(Modifier::BOLD)
+                color::selected_item_style().add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
                     .fg(Color::Rgb(153, 153, 153))

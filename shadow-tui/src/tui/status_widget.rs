@@ -1,5 +1,5 @@
 use crate::tui::TuiAppState;
-use crate::tui::dim;
+use shadow_utils::color;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
@@ -61,7 +61,7 @@ pub fn render_yolo_hint(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
 
     let line = Line::from(vec![
         Span::styled(label.to_string(), Style::default().fg(color)),
-        Span::styled(suffix.to_string(), dim()),
+        Span::styled(suffix.to_string(), color::dim()),
     ]);
     f.render_widget(Paragraph::new(line), right);
 }
