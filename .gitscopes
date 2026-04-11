@@ -1,11 +1,11 @@
-core: shadow core with db, mind and llm
-tui: terminal user interface
-services: suporting services like ingest.
-tools: tools for the llms
-continuity: shadow continuity
-locus: LLM inference & streaming
-mind: shadow mind core functionality
-llmclient: llm client & provider routing
-db: sqlite & data layer
-utils: supporting utils
-config: Configs for running the app
+core: workspace-level changes spanning multiple crates
+tui: terminal interface & rendering
+services: background services (ingest, watcher)
+tools: llm-callable tools (search, fetch, weather)
+continuity: belief persistence & mind schema
+locus: session orchestration & chat flow
+mind: belief extraction, updates & reflection
+llmclient: llm client, streaming & provider routing
+db: sqlite layer & query logic
+utils: shared utilities & helpers
+config: app configuration & paths
