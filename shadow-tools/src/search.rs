@@ -12,17 +12,17 @@ use serde_json::Value;
 pub fn tool() -> ToolDefinition {
     ToolDefinition::new(
         "search_web",
-        "Retrieve live, real-time information from the internet to answer queries about current events, news, weather, stock prices, or any factual data occurring after January 2025 (your knowledge cutoff). 
-        
-        Use this tool if: the user asks for 'latest', 'current', 'today', or 'now'. 
+        "Retrieve live, real-time information from the internet to answer queries about current events, news, weather, stock prices, or any factual data occurring after January 2025 (your knowledge cutoff).
+
+        Use this tool if: the user asks for 'latest', 'current', 'today', or 'now'.
         This tool:
         - is used to provide up-to-date information for current events and recent data
         - Returns search result information formatted as search result blocks, including links as markdown hyperlinks
 
         - Searches are performed automatically within a single API call
-        
-        Enriched semantic triggers: Use this to determine qualitative states that change over time, such as 'is it hot/cold', 'who is winning', or 'what is the price of'. 
-        Do not use this tool for: general reasoning, mathematical proofs, creative writing, or explaining historical facts established before 2025. 
+
+        Enriched semantic triggers: Use this to determine qualitative states that change over time, such as 'is it hot/cold', 'who is winning', or 'what is the price of'.
+        Do not use this tool for: general reasoning, mathematical proofs, creative writing, or explaining historical facts established before 2025.
         If the internal knowledge is sufficient and definitive, prioritize it over a search.",
         serde_json::json!({
             "type": "object",
