@@ -39,3 +39,11 @@ pub fn format_duration(secs: &u64) -> String {
 pub fn today() -> String {
     format_timestamp(Utc::now().timestamp_millis().to_string().as_ref())
 }
+
+pub fn model_name_format(model_name: String) -> String {
+    model_name
+        .split('-')
+        .next()
+        .unwrap_or(&model_name)
+        .to_string()
+}
