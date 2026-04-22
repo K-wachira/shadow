@@ -27,7 +27,6 @@ pub struct PendingConfirm {
 #[derive(Debug)]
 pub struct TuiAppState {
     pub input: String, // what the user is typing
-    pub yolo_mode: bool,
     pub assistant_state: AssistantState,
     pub rename_mode: bool,
     pub cursor_pos: usize,
@@ -69,7 +68,6 @@ impl Default for TuiAppState {
             persisted_chat_rows: 0,
             persisted_chat_width: 0,
             tick: 0,
-            yolo_mode: false,
             // context_logs: vec![],
             rename_mode: false,
             slash_mode: false,          // typing a slash command
@@ -164,7 +162,6 @@ mod tests {
         assert_eq!(state.tick, 0);
         assert!(!state.slash_mode);
         assert!(!state.history_mode);
-        assert!(!state.yolo_mode);
         assert!(state.slash_input.is_empty());
         assert!(state.history_sessions.is_empty());
         assert_eq!(state.history_cursor, 0);
