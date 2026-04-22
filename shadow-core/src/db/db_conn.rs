@@ -254,8 +254,8 @@ impl Database {
                 Ok(EntryLog {
                     id: row.get::<_, i32>(0)?,
                     content: row.get::<_, String>(1)?,
-                    energy: row.get::<_, Option<i32>>(2)?,
-                    mood: row.get::<_, Option<i32>>(3)?,
+                    energy: row.get::<_, Option<i32>>(2)?.filter(|&v| v != 0),
+                    mood: row.get::<_, Option<i32>>(3)?.filter(|&v| v != 0),
                     weather: row.get::<_, Option<String>>(4)?,
                     location: row.get::<_, Option<String>>(5)?,
                     time_stamp: row.get::<_, String>(6)?,

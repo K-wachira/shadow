@@ -22,6 +22,7 @@ pub struct CoreLLM {
 pub enum Backend {
     Ollama,
     MistralRs,
+    Llamacpp,
     Unknown,
 }
 
@@ -32,6 +33,11 @@ pub struct OllamaConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MistralRsConfig {
+    pub host: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Llamacpp {
     pub host: String,
 }
 
@@ -72,6 +78,14 @@ impl Default for MistralRsConfig {
     fn default() -> Self {
         Self {
             host: "http://localhost:1234".to_string(),
+        }
+    }
+}
+
+impl Default for Llamacpp {
+    fn default() -> Self {
+        Self {
+            host: "http://127.0.0.1:8080".to_string(),
         }
     }
 }

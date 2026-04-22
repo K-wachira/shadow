@@ -1,4 +1,3 @@
-use shadow_utils::color;
 use ratatui::style::Color;
 use ratatui::style::Modifier;
 use ratatui::style::Style;
@@ -7,6 +6,7 @@ use ratatui::text::Span;
 use shadow_core::json_tree::FlatRow;
 use shadow_core::json_tree::JsonTree;
 use shadow_core::json_tree::RowDisplay;
+use shadow_utils::color;
 
 fn row_screen_lines(row: &FlatRow, available_width: usize) -> usize {
     let width = row_content_width(row);
