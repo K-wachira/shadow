@@ -1,5 +1,4 @@
 use crate::tui::TuiAppState;
-use shadow_utils::color;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
@@ -8,6 +7,7 @@ use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::Paragraph;
+use shadow_utils::color;
 
 // ─── Status line ─────────────────────────────────────────────────────────────
 pub fn render_status_line(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {

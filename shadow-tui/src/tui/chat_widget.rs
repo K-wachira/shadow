@@ -29,9 +29,9 @@ use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 use shadow_core::model::ToolCall;
 use shadow_core::model::ToolState;
+use shadow_utils::color;
 use shadow_utils::utils::format_timestamp;
 use shadow_utils::utils::truncate;
-use shadow_utils::color;
 
 #[derive(Clone)]
 enum Segment {
@@ -369,9 +369,15 @@ fn message_to_lines(msg: &Message, tick: u64, total_area: Rect) -> Vec<Line<'sta
                 Span::styled(padding, color::sentinel_user_bg_styles()),
             ]);
             vec![
-                Line::from(Span::styled(blank.clone(), color::sentinel_user_bg_styles())),
+                Line::from(Span::styled(
+                    blank.clone(),
+                    color::sentinel_user_bg_styles(),
+                )),
                 line,
-                Line::from(Span::styled(blank.clone(), color::sentinel_user_bg_styles())),
+                Line::from(Span::styled(
+                    blank.clone(),
+                    color::sentinel_user_bg_styles(),
+                )),
             ]
         }
 
