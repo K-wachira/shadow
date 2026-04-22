@@ -76,6 +76,7 @@ impl Database {
             ended_at_ms INTEGER, 
             provider TEXT, 
             model TEXT, 
+            context_tokens INTEGER NOT NULL DEFAULT 0,
             system_prompt TEXT,
             metadata_json TEXT NOT NULL DEFAULT '{}'
         );
@@ -271,7 +272,7 @@ impl Database {
     pub fn get_session(&self, session_id: i64) -> color_eyre::Result<Sessions> {
         let session = self.conn.query_row(
             "SELECT id, user_id, title, status, created_at_ms, updated_at_ms, 
-                    started_at_ms, ended_at_ms, provider, model, system_prompt, metadata_json
+                    started_at_ms, ended_at_ms, provider, model, system_prompt, metadata_json, context_tokens
              FROM sessions WHERE id = ?1",
             rusqlite::params![session_id],
             |row| {
@@ -288,6 +289,7 @@ impl Database {
                     model: row.get(9)?,
                     system_prompt: row.get(10)?,
                     metadata_json: row.get(11)?,
+                    context_tokens: row.get(12)?,
                 })
             },
         )?;
@@ -297,7 +299,7 @@ impl Database {
     pub fn get_recent_sessions(&self, limit: usize) -> color_eyre::Result<Vec<Sessions>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, user_id, title, status, created_at_ms, updated_at_ms,
-                    started_at_ms, ended_at_ms, provider, model, system_prompt, metadata_json
+                    started_at_ms, ended_at_ms, provider, model, system_prompt, metadata_json, context_tokens
              FROM sessions ORDER BY created_at_ms DESC LIMIT ?1",
         )?;
         let sessions = stmt
@@ -315,6 +317,7 @@ impl Database {
                     model: row.get(9)?,
                     system_prompt: row.get(10)?,
                     metadata_json: row.get(11)?,
+                    context_tokens: row.get(12)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
