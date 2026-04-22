@@ -167,6 +167,7 @@ pub async fn handle_key_normal(
                     }
                 }
                 input_buf.clear();
+                app_state.rename_mode = false;
                 return Ok(false);
             }
             input_buf.clear();
