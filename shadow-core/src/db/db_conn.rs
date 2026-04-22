@@ -70,12 +70,12 @@ impl Database {
             user_id  INTEGER NOT NULL,
             title TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'active',
-            created_at_ms INTEGER NOT NULL, 
-            updated_at_ms INTEGER NOT NULL, 
-            started_at_ms INTEGER, 
-            ended_at_ms INTEGER, 
-            provider TEXT, 
-            model TEXT, 
+            created_at_ms INTEGER NOT NULL,
+            updated_at_ms INTEGER NOT NULL,
+            started_at_ms INTEGER,
+            ended_at_ms INTEGER,
+            provider TEXT,
+            model TEXT,
             system_prompt TEXT,
             metadata_json TEXT NOT NULL DEFAULT '{}'
         );
@@ -369,7 +369,7 @@ impl Database {
 
     pub fn get_session(&self, session_id: i64) -> color_eyre::Result<Sessions> {
         let session = self.conn.query_row(
-            "SELECT id, user_id, title, status, created_at_ms, updated_at_ms, 
+            "SELECT id, user_id, title, status, created_at_ms, updated_at_ms,
                     started_at_ms, ended_at_ms, provider, model, system_prompt, metadata_json
              FROM sessions WHERE id = ?1",
             rusqlite::params![session_id],
