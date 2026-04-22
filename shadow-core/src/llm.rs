@@ -115,6 +115,13 @@ struct ChatRequest<'a> {
 #[derive(Deserialize)]
 struct ChatResponse {
     choices: Vec<ChatChoice>,
+    usage: Usage,
+}
+
+#[derive(Deserialize)]
+struct Usage {
+    total_tokens: u32,
+    completion_tokens: u32,
 }
 
 #[derive(Deserialize)]
@@ -418,10 +425,6 @@ impl LlmClient {
                     break;
                 }
 
-                // for call in &assistant_message.tool_calls {
-                //     eprintln!("\r\n[tool request] {}", format_tool_call(call));
-                // }
-
                 history.push(ChatMessage::from_response(assistant_message.clone()));
 
                 for call in &assistant_message.tool_calls {
@@ -429,11 +432,6 @@ impl LlmClient {
                         Ok(output) => output,
                         Err(err) => format!("Tool error: {err}"),
                     };
-                    // eprintln!(
-                    //     "\r\n[tool result] {} => {}",
-                    //     call.function.name,
-                    //     format_tool_output(&tool_output)
-                    // );
                     history.push(ChatMessage::tool_result(call, tool_output));
                 }
             }

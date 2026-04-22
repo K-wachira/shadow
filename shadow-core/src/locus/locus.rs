@@ -28,6 +28,8 @@ pub struct Locus {
     pub mind: ShadowMind,
     pub config: Config,
     pub paths: ShadowPaths,
+    pub context_tokens: i64,
+    pub ephemeral: Option<String>,
 }
 
 impl Locus {
@@ -45,6 +47,8 @@ impl Locus {
             mind,
             config,
             paths,
+            context_tokens: 0,
+            ephemeral: None,
         })
     }
 
@@ -59,6 +63,7 @@ impl Locus {
     pub fn start_new_session(&mut self) {
         self.session_name = String::from("Untitled Session");
         self.session_id = 0;
+        self.context_tokens = 0;
         self.messages = vec![Message::logo(&self.llm_client.model_name)];
         self.assistant_state = AssistantState::Idle;
     }
