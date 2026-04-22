@@ -4,6 +4,7 @@ use crate::tui::render_bottom_pane;
 use crate::tui::render_chat;
 use crate::tui::render_input;
 use crate::tui::render_status_line;
+use crate::tui::render_yolo_hint;
 
 use crate::tui::SLASH_COMMANDS;
 use ratatui::Frame;

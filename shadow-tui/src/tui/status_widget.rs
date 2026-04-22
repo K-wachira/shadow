@@ -42,15 +42,9 @@ pub fn render_status_line(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
 }
 
 #[allow(dead_code)]
-pub fn render_yolo_hint(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
-    let (label, color) = if tui_state.yolo_mode {
-        ("YOLO Mode", Color::Red)
-    } else {
-        ("Safe YOLO", Color::Magenta)
-    };
-
-    let suffix = "  (ctrl + y to toggle)";
-    let full_len = (label.len() + suffix.len()) as u16;
+pub fn render_yolo_hint(f: &mut Frame, area: Rect, locus: &Locus) {
+    let suffix = locus.ephemeral.clone().unwrap_or_default();
+    let full_len = (suffix.len()) as u16;
     let x = area.x + area.width.saturating_sub(full_len + 1);
     let right = Rect {
         x,
@@ -60,7 +54,7 @@ pub fn render_yolo_hint(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
     };
 
     let line = Line::from(vec![
-        Span::styled(label.to_string(), Style::default().fg(color)),
+        // Span::styled(label.to_string(), Style::default()),
         Span::styled(suffix.to_string(), color::dim()),
     ]);
     f.render_widget(Paragraph::new(line), right);

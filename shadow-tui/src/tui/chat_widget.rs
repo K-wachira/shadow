@@ -432,14 +432,17 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus
                 session.title.clone()
             };
 
+            let context_len = format!("tkns: {}", session.context_tokens);
+
             if i == tui_state.history_cursor {
                 Line::from(vec![
                     Span::raw("  "),
                     Span::styled(
                         format!(
-                            "{:<42} {}",
+                            "{:<42} {:<42} {}",
                             title,
-                            format_timestamp(&session.created_at_ms.to_string())
+                            format_timestamp(&session.created_at_ms.to_string()),
+                            context_len
                         ),
                         Style::default()
                             .fg(Color::Black)
@@ -452,9 +455,10 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus
                     Span::raw("  "),
                     Span::styled(
                         format!(
-                            "{:<42} {}",
+                            "{:<42} {:<42} {}",
                             title,
-                            format_timestamp(&session.created_at_ms.to_string())
+                            format_timestamp(&session.created_at_ms.to_string()),
+                            context_len
                         ),
                         color::dim(),
                     ),
