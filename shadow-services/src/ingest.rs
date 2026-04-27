@@ -56,7 +56,9 @@ mod tests {
 
     #[test]
     fn get_files_returns_error_for_nonexistent_dir() {
-        let result = get_files(&PathBuf::from("/nonexistent/path/that/does/not/exist/12345"));
+        let result = get_files(&PathBuf::from(
+            "/nonexistent/path/that/does/not/exist/12345",
+        ));
         assert!(result.is_err());
     }
 

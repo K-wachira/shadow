@@ -117,34 +117,46 @@ mod tests {
 
     fn make_test_mind() -> ShadowMind {
         let mut mind = ShadowMind::default();
-        mind.surface.insert("interests".into(), Belief {
-            value: "loves reading".into(),
-            confidence: 0.8,
-            source_logs: vec![],
-            last_updated: "2026-01-01".into(),
-            operations: vec![],
-        });
-        mind.behavioural.insert("habits".into(), Belief {
-            value: "morning jog".into(),
-            confidence: 0.6,
-            source_logs: vec![],
-            last_updated: "2026-01-01".into(),
-            operations: vec![],
-        });
-        mind.mental_model.insert("self_view".into(), Belief {
-            value: "capable".into(),
-            confidence: 0.9,
-            source_logs: vec![],
-            last_updated: "2026-01-01".into(),
-            operations: vec![],
-        });
-        mind.values.insert("core".into(), Belief {
-            value: "honesty".into(),
-            confidence: 0.95,
-            source_logs: vec![],
-            last_updated: "2026-01-01".into(),
-            operations: vec![],
-        });
+        mind.surface.insert(
+            "interests".into(),
+            Belief {
+                value: "loves reading".into(),
+                confidence: 0.8,
+                source_logs: vec![],
+                last_updated: "2026-01-01".into(),
+                operations: vec![],
+            },
+        );
+        mind.behavioural.insert(
+            "habits".into(),
+            Belief {
+                value: "morning jog".into(),
+                confidence: 0.6,
+                source_logs: vec![],
+                last_updated: "2026-01-01".into(),
+                operations: vec![],
+            },
+        );
+        mind.mental_model.insert(
+            "self_view".into(),
+            Belief {
+                value: "capable".into(),
+                confidence: 0.9,
+                source_logs: vec![],
+                last_updated: "2026-01-01".into(),
+                operations: vec![],
+            },
+        );
+        mind.values.insert(
+            "core".into(),
+            Belief {
+                value: "honesty".into(),
+                confidence: 0.95,
+                source_logs: vec![],
+                last_updated: "2026-01-01".into(),
+                operations: vec![],
+            },
+        );
         mind
     }
 
@@ -219,7 +231,10 @@ mod tests {
     #[test]
     fn build_extraction_prompt_contains_log_and_fields() {
         let log_str = "I went for a run today".to_string();
-        let fields = vec!["surface.interests".to_string(), "behavioural.habits".to_string()];
+        let fields = vec![
+            "surface.interests".to_string(),
+            "behavioural.habits".to_string(),
+        ];
         let prompt = build_extraction_prompt(log_str, &fields);
         assert!(prompt.contains("I went for a run today"));
         assert!(prompt.contains("surface.interests"));

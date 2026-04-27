@@ -185,7 +185,10 @@ mod tests {
         let toml_str = toml::to_string_pretty(&config).unwrap();
         let parsed: Config = toml::from_str(&toml_str).unwrap();
         assert_eq!(parsed.llm_provider.provider, config.llm_provider.provider);
-        assert_eq!(parsed.llm_provider.model_name, config.llm_provider.model_name);
+        assert_eq!(
+            parsed.llm_provider.model_name,
+            config.llm_provider.model_name
+        );
     }
 
     #[test]

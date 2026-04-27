@@ -146,14 +146,12 @@ mod tests {
             confidence: 0.75,
             source_logs: vec!["log1".into(), "log2".into()],
             last_updated: "2026-01-15".into(),
-            operations: vec![
-                Operation {
-                    op: OpKind::Create,
-                    value: "initial".into(),
-                    trigger: "init".into(),
-                    date: "2026-01-01".into(),
-                },
-            ],
+            operations: vec![Operation {
+                op: OpKind::Create,
+                value: "initial".into(),
+                trigger: "init".into(),
+                date: "2026-01-01".into(),
+            }],
         };
         let json = serde_json::to_string(&belief).unwrap();
         let deserialized: Belief = serde_json::from_str(&json).unwrap();
@@ -167,13 +165,16 @@ mod tests {
     #[test]
     fn shadow_mind_serializes_with_maps() {
         let mut mind = ShadowMind::default();
-        mind.surface.insert("key1".into(), Belief {
-            value: "val1".into(),
-            confidence: 0.5,
-            source_logs: vec![],
-            last_updated: "2026-01-01".into(),
-            operations: vec![],
-        });
+        mind.surface.insert(
+            "key1".into(),
+            Belief {
+                value: "val1".into(),
+                confidence: 0.5,
+                source_logs: vec![],
+                last_updated: "2026-01-01".into(),
+                operations: vec![],
+            },
+        );
         let json = serde_json::to_string(&mind).unwrap();
         assert!(json.contains("key1"));
         assert!(json.contains("val1"));

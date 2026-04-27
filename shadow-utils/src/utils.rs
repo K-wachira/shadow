@@ -139,10 +139,7 @@ mod tests {
 
     #[test]
     fn model_name_format_no_dash_returns_original() {
-        assert_eq!(
-            model_name_format("gpt4".to_string()),
-            "gpt4"
-        );
+        assert_eq!(model_name_format("gpt4".to_string()), "gpt4");
     }
 
     #[test]

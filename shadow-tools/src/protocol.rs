@@ -179,10 +179,7 @@ mod tests {
         let call: ChatToolCall = serde_json::from_str(json).unwrap();
         assert_eq!(call.id, Some("call-1".to_string()));
         assert_eq!(call.function.name, "weather");
-        assert_eq!(
-            call.function.arguments["city"],
-            serde_json::json!("London")
-        );
+        assert_eq!(call.function.arguments["city"], serde_json::json!("London"));
     }
 
     #[test]
@@ -204,7 +201,10 @@ mod tests {
                 Box::pin(async move { Ok(format!("echo: {}", msg)) })
             },
         );
-        let result = tool.execute(serde_json::json!({"msg": "hello"})).await.unwrap();
+        let result = tool
+            .execute(serde_json::json!({"msg": "hello"}))
+            .await
+            .unwrap();
         assert_eq!(result, "echo: hello");
     }
 

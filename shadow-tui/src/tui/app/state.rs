@@ -118,7 +118,10 @@ mod tests {
         let mut state = TuiAppState::default();
         state.active_op = ActiveOperation::Streaming(Instant::now());
         update_assistant_state(&mut state);
-        assert!(matches!(state.assistant_state, AssistantState::Thinking { .. }));
+        assert!(matches!(
+            state.assistant_state,
+            AssistantState::Thinking { .. }
+        ));
     }
 
     #[test]
@@ -126,7 +129,10 @@ mod tests {
         let mut state = TuiAppState::default();
         state.active_op = ActiveOperation::Reflecting(Instant::now());
         update_assistant_state(&mut state);
-        assert!(matches!(state.assistant_state, AssistantState::Reflecting { .. }));
+        assert!(matches!(
+            state.assistant_state,
+            AssistantState::Reflecting { .. }
+        ));
     }
 
     #[test]
@@ -134,7 +140,10 @@ mod tests {
         let mut state = TuiAppState::default();
         state.active_op = ActiveOperation::Ingesting(Instant::now());
         update_assistant_state(&mut state);
-        assert!(matches!(state.assistant_state, AssistantState::Ingesting { .. }));
+        assert!(matches!(
+            state.assistant_state,
+            AssistantState::Ingesting { .. }
+        ));
     }
 
     #[test]
