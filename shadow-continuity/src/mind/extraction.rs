@@ -109,3 +109,170 @@ pub fn parse_field_array(response: &str) -> color_eyre::Result<Vec<String>> {
 
     Ok(serde_json::from_str(clean)?)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mind::mind_model::ShadowMind;
+
+    fn make_test_mind() -> ShadowMind {
+        let mut mind = ShadowMind::default();
+        mind.surface.insert(
+            "interests".into(),
+            Belief {
+                value: "loves reading".into(),
+                confidence: 0.8,
+                source_logs: vec![],
+                last_updated: "2026-01-01".into(),
+                operations: vec![],
+            },
+        );
+        mind.behavioural.insert(
+            "habits".into(),
+            Belief {
+                value: "morning jog".into(),
+                confidence: 0.6,
+                source_logs: vec![],
+                last_updated: "2026-01-01".into(),
+                operations: vec![],
+            },
+        );
+        mind.mental_model.insert(
+            "self_view".into(),
+            Belief {
+                value: "capable".into(),
+                confidence: 0.9,
+                source_logs: vec![],
+                last_updated: "2026-01-01".into(),
+                operations: vec![],
+            },
+        );
+        mind.values.insert(
+            "core".into(),
+            Belief {
+                value: "honesty".into(),
+                confidence: 0.95,
+                source_logs: vec![],
+                last_updated: "2026-01-01".into(),
+                operations: vec![],
+            },
+        );
+        mind
+    }
+
+    #[test]
+    fn collect_field_paths_returns_all_field_paths() {
+        let mind = make_test_mind();
+        let paths = collect_field_paths(&mind);
+        assert_eq!(paths.len(), 4);
+        assert!(paths.contains(&"surface.interests".to_string()));
+        assert!(paths.contains(&"behavioural.habits".to_string()));
+        assert!(paths.contains(&"mental_model.self_view".to_string()));
+        assert!(paths.contains(&"values.core".to_string()));
+    }
+
+    #[test]
+    fn collect_field_paths_empty_for_empty_mind() {
+        let mind = ShadowMind::default();
+        let paths = collect_field_paths(&mind);
+        assert!(paths.is_empty());
+    }
+
+    #[test]
+    fn parse_field_array_parses_simple_array() {
+        let response = r#"["surface.interests", "values.core"]"#;
+        let result = parse_field_array(response).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], "surface.interests");
+        assert_eq!(result[1], "values.core");
+    }
+
+    #[test]
+    fn parse_field_array_parses_empty_array() {
+        let response = "[]";
+        let result = parse_field_array(response).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn parse_field_array_strips_json_fences() {
+        let response = "```json\n[\"surface.interests\"]\n```";
+        let result = parse_field_array(response).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "surface.interests");
+    }
+
+    #[test]
+    fn parse_field_array_strips_plain_code_fences() {
+        let response = "```\n[\"surface.interests\"]\n```";
+        let result = parse_field_array(response).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn parse_field_array_handles_whitespace() {
+        let response = "  \n  [\"surface.interests\"]  \n  ";
+        let result = parse_field_array(response).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn parse_field_array_returns_error_for_invalid_json() {
+        let response = "not json at all";
+        assert!(parse_field_array(response).is_err());
+    }
+
+    #[test]
+    fn parse_field_array_returns_error_for_non_array() {
+        let response = "\"just a string\"";
+        assert!(parse_field_array(response).is_err());
+    }
+
+    #[test]
+    fn build_extraction_prompt_contains_log_and_fields() {
+        let log_str = "I went for a run today".to_string();
+        let fields = vec![
+            "surface.interests".to_string(),
+            "behavioural.habits".to_string(),
+        ];
+        let prompt = build_extraction_prompt(log_str, &fields);
+        assert!(prompt.contains("I went for a run today"));
+        assert!(prompt.contains("surface.interests"));
+        assert!(prompt.contains("behavioural.habits"));
+    }
+
+    #[test]
+    fn build_extraction_prompt_has_required_sections() {
+        let prompt = build_extraction_prompt("test".into(), &vec!["field1".into()]);
+        assert!(prompt.contains("Log entry"));
+        assert!(prompt.contains("Known mind fields"));
+        assert!(prompt.contains("Task"));
+        assert!(prompt.contains("Output"));
+    }
+
+    #[test]
+    fn build_update_prompt_contains_all_sections() {
+        let belief = Belief {
+            value: "test belief".into(),
+            confidence: 0.8,
+            source_logs: vec!["log1".into()],
+            last_updated: "2026-01-01".into(),
+            operations: vec![],
+        };
+        let log = EntryLog {
+            id: 1,
+            content: "new log".into(),
+            energy: Some(8),
+            mood: Some(7),
+            weather: Some("sunny".into()),
+            location: Some("home".into()),
+            time_stamp: "2026-01-01".into(),
+            device: None,
+            log_type: None,
+        };
+        let prompt = build_update_prompt("surface.test", &belief, &log);
+        assert!(prompt.contains("surface.test"));
+        assert!(prompt.contains("test belief"));
+        assert!(prompt.contains("new log"));
+    }
+}

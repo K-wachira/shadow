@@ -20,8 +20,8 @@ Logs (iPhone Shortcut → JSON → iCloud Drive)
    shadow.mind (living document, periodically rewritten by Ollama)
 ```
 
-**SQLite** is the raw truth. Append-only. Never mutated.  
-**Ollama** is the author, not a query locus.  
+**SQLite** is the raw truth. Append-only. Never mutated.
+**Ollama** is the author, not a query locus.
 **`shadow.mind`** is a structured file (JSON/TOML) holding versioned beliefs, confidence gradients, and a layered model of you — not a database table.
 
 ## Features

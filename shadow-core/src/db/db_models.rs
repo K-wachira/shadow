@@ -15,6 +15,7 @@ pub struct Sessions {
     pub model: Option<String>,
     pub system_prompt: Option<String>,
     pub metadata_json: String,
+    pub context_tokens: i64,
 }
 
 #[derive(Serialize, Deserialize)]

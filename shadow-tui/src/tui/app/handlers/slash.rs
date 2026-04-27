@@ -281,7 +281,6 @@ fn handle_action_rename(app_state: &mut TuiAppState, locus: &mut Locus, input_bu
     app_state.rename_mode = true;
     input_buf.clear();
     input_buf.push_str(locus.session_name.clone().as_str());
-    app_state.rename_mode = false;
 }
 
 fn handle_action_memory(app_state: &mut TuiAppState, locus: &mut Locus) {

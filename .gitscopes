@@ -1,4 +1,5 @@
-core: workspace-level changes spanning multiple crates
+core: shadow core
+all: workspace-level changes spanning multiple crates
 tui: terminal interface & rendering
 services: background services (ingest, watcher)
 tools: llm-callable tools (search, fetch, weather)

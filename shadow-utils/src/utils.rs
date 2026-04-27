@@ -39,3 +39,111 @@ pub fn format_duration(secs: &u64) -> String {
 pub fn today() -> String {
     format_timestamp(Utc::now().timestamp_millis().to_string().as_ref())
 }
+
+pub fn model_name_format(model_name: String) -> String {
+    model_name
+        .split('-')
+        .next()
+        .unwrap_or(&model_name)
+        .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn truncate_returns_same_string_when_shorter_than_max() {
+        assert_eq!(truncate("hello", 10), "hello");
+    }
+
+    #[test]
+    fn truncate_returns_same_string_when_exact_length() {
+        assert_eq!(truncate("hello", 5), "hello");
+    }
+
+    #[test]
+    fn truncate_truncates_and_adds_ellipsis_when_longer() {
+        assert_eq!(truncate("hello world", 5), "hello…");
+    }
+
+    #[test]
+    fn truncate_handles_multibyte_characters() {
+        let s = "你好世界";
+        assert_eq!(truncate(s, 2), "你好…");
+    }
+
+    #[test]
+    fn truncate_with_zero_max_returns_ellipsis() {
+        assert_eq!(truncate("hello", 0), "…");
+    }
+
+    #[test]
+    fn format_timestamp_parses_rfc3339() {
+        let result = format_timestamp("2026-03-29T10:00:43+03:00");
+        assert!(result.contains("2026-03-29"));
+        assert!(result.contains("10:00"));
+    }
+
+    #[test]
+    fn format_timestamp_parses_millis() {
+        // 2026-03-29 10:00:00 UTC = 1774927200000 ms
+        let result = format_timestamp("1774927200000");
+        assert!(result.contains("2026-03-29"));
+        assert!(result.contains("10:00"));
+    }
+
+    #[test]
+    fn format_timestamp_falls_back_to_input() {
+        assert_eq!(format_timestamp("not-a-date"), "not-a-date");
+    }
+
+    #[test]
+    fn format_timestamp_handles_invalid_millis() {
+        // Too large to be a valid timestamp
+        assert_eq!(format_timestamp("999999999999999999"), "999999999999999999");
+    }
+
+    #[test]
+    fn format_duration_seconds_only() {
+        assert_eq!(format_duration(&45), "45s");
+    }
+
+    #[test]
+    fn format_duration_minutes_and_seconds() {
+        assert_eq!(format_duration(&125), "2m 5s");
+    }
+
+    #[test]
+    fn format_duration_hours_minutes_seconds() {
+        assert_eq!(format_duration(&3661), "1h 1m 1s");
+    }
+
+    #[test]
+    fn format_duration_exact_hour() {
+        assert_eq!(format_duration(&3600), "1h 0m 0s");
+    }
+
+    #[test]
+    fn format_duration_zero() {
+        assert_eq!(format_duration(&0), "0s");
+    }
+
+    #[test]
+    fn model_name_format_splits_on_dash() {
+        assert_eq!(
+            model_name_format("deepseek-r1-latest".to_string()),
+            "deepseek"
+        );
+    }
+
+    #[test]
+    fn model_name_format_no_dash_returns_original() {
+        assert_eq!(model_name_format("gpt4".to_string()), "gpt4");
+    }
+
+    #[test]
+    fn model_name_format_empty_string() {
+        assert_eq!(model_name_format("".to_string()), "");
+    }
+}
