@@ -11,7 +11,6 @@ use ratatui::text::Span;
 use ratatui::widgets::Paragraph;
 use shadow_core::locus::Locus;
 use shadow_utils::color;
-use shadow_utils::utils;
 
 pub fn render_bottom_pane(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus) {
     if tui_state.slash_mode {
@@ -22,10 +21,7 @@ pub fn render_bottom_pane(f: &mut Frame, area: Rect, tui_state: &TuiAppState, lo
     // normal statusbar
     let left = format!("~ {}", locus.session_name);
 
-    let right = format!(
-        "{}  100% left",
-        utils::model_name_format(locus.llm_client.model_name.clone())
-    );
+    let right = format!("{}  100% left", locus.llm_client.model_name.clone());
     let padding = area.width.saturating_sub((left.len() + right.len()) as u16);
 
     let line = Line::from(vec![

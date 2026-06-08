@@ -142,7 +142,7 @@ impl LlmClient {
         Ok(Self {
             client: Client::new(),
             base_url: normalize_base_url(&config.llm_provider.base_url),
-            model_name: config.llm_provider.model_name.clone(),
+            model_name: model_name_format(config.llm_provider.model_name.clone()),
             api_key: config.llm_provider.api_key.clone(),
             tool_registry: ToolRegistry::with_defaults(),
         })

@@ -37,13 +37,14 @@ impl Locus {
         db: Arc<Database>, llm_client: Arc<LlmClient>, config: Config, paths: ShadowPaths,
     ) -> color_eyre::Result<Self> {
         let mind = mind::load(&paths.mind)?;
+        let model_name_temp = llm_client.model_name.clone();
         Ok(Self {
             db,
             llm_client,
             session_id: 0,
             session_name: String::from("Untitled Session"),
             assistant_state: AssistantState::Idle,
-            messages: vec![Message::logo(String::new())],
+            messages: vec![Message::logo(model_name_temp)],
             mind,
             config,
             paths,
