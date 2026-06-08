@@ -2,16 +2,26 @@ use reqwest::Client;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-struct Artist { name: String }
+struct Artist {
+    name: String,
+}
 
 #[derive(Deserialize, Debug)]
-struct Track { name: String, artists: Vec<Artist> }
+struct Track {
+    name: String,
+    artists: Vec<Artist>,
+}
 
 #[derive(Deserialize, Debug)]
-struct PlayHistoryItem { track: Track, played_at: String }
+struct PlayHistoryItem {
+    track: Track,
+    played_at: String,
+}
 
 #[derive(Deserialize, Debug)]
-struct RecentlyPlayedResponse { items: Vec<PlayHistoryItem> }
+struct RecentlyPlayedResponse {
+    items: Vec<PlayHistoryItem>,
+}
 
 #[tokio::main]
 async fn spotify() {
@@ -30,6 +40,9 @@ async fn spotify() {
         .unwrap();
 
     for item in res.items {
-        println!("{} — {} @ {}", item.track.name, item.track.artists[0].name, item.played_at);
+        println!(
+            "{} — {} @ {}",
+            item.track.name, item.track.artists[0].name, item.played_at
+        );
     }
 }
