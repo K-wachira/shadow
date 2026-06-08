@@ -9,6 +9,7 @@ use shadow_tools::ChatTool;
 use shadow_tools::ChatToolCall;
 use shadow_tools::ToolDefinition;
 use shadow_tools::ToolRegistry;
+use shadow_utils::utils::model_name_format;
 use std::pin::Pin;
 
 pub type LlmStream = Pin<Box<dyn Stream<Item = String> + Send>>;
