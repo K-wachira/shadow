@@ -115,7 +115,7 @@ struct ChatRequest<'a> {
 #[derive(Deserialize)]
 struct ChatResponse {
     choices: Vec<ChatChoice>,
-    usage: Usage,
+    usage: Option<Usage>,
 }
 
 #[derive(Deserialize)]
@@ -130,7 +130,7 @@ struct ChatChoice {
     delta: Option<ChatMessageResponse>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 struct ChatMessageResponse {
     content: Option<String>,
     #[serde(default)]
@@ -420,7 +420,7 @@ impl LlmClient {
                     tracing::error!("stream ended without assistant content or tool calls");
                     break;
                 }
-
+                tracing::info!(">>>> assistant_message <<<<!!! {:?} ", assistant_message);
                 if assistant_message.tool_calls.is_empty() {
                     break;
                 }
