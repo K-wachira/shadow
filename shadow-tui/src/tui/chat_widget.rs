@@ -285,39 +285,9 @@ fn segment_height(segment: &Segment, available_width: u16) -> usize {
 
 fn lines_height(lines: &[Line<'static>], available_width: u16) -> usize {
     let width = available_width.max(1);
-    let sentinel_style = Style::default()
-        .fg(Color::Rgb(1, 2, 3))
-        .bg(Color::Rgb(1, 2, 3));
-
-    let mut rendered_lines = lines.to_vec();
-    rendered_lines.push(Line::from(vec![Span::styled("█", sentinel_style)]));
-
-    let upper_bound = lines
-        .iter()
-        .map(|line| {
-            let line_width = line.width().max(1);
-            line_width.div_ceil(width as usize)
-        })
-        .sum::<usize>()
-        .saturating_add(1)
-        .max(1);
-
-    let area = Rect::new(0, 0, width, upper_bound.min(u16::MAX as usize) as u16);
-    let mut temp_buf = Buffer::empty(area);
-    Paragraph::new(rendered_lines)
+    Paragraph::new(lines.to_vec())
         .wrap(Wrap { trim: false })
-        .render(area, &mut temp_buf);
-
-    for row in 0..area.height {
-        for col in 0..area.width {
-            let cell = &temp_buf[(col, row)];
-            if cell.symbol() == "█" && cell.style().fg == Some(Color::Rgb(1, 2, 3)) {
-                return row as usize;
-            }
-        }
-    }
-
-    upper_bound.saturating_sub(1)
+        .line_count(width)
 }
 
 fn chat_area(total_area: Rect, tui_state: &TuiAppState) -> Rect {
