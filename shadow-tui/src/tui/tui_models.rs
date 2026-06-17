@@ -1,8 +1,14 @@
 use shadow_core::db::Sessions;
 use shadow_core::model::AssistantState;
 use std::path::PathBuf;
+use std::time::Duration;
 use std::time::Instant;
 use tokio_util::sync::CancellationToken;
+
+/// How long terminal resizes must stop arriving before chat scrollback is
+/// re-persisted. Debouncing avoids re-emitting the whole transcript on every
+/// intermediate width during a drag-resize.
+pub const RESIZE_DEBOUNCE: Duration = Duration::from_millis(100);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PendingConfirmAction {
@@ -35,6 +41,9 @@ pub struct TuiAppState {
     pub auto_scroll: bool,
     pub persisted_chat_rows: usize,
     pub persisted_chat_width: u16,
+    /// Set when a terminal resize is observed; scrollback persistence is
+    /// deferred until no resize arrives for `RESIZE_DEBOUNCE`.
+    pub resize_pending: Option<Instant>,
     /// Monotonic tick counter — increment on each terminal tick event (~100ms)
     pub tick: u64,
     pub active_op: ActiveOperation,
@@ -67,6 +76,7 @@ impl Default for TuiAppState {
             auto_scroll: true,
             persisted_chat_rows: 0,
             persisted_chat_width: 0,
+            resize_pending: None,
             tick: 0,
             // context_logs: vec![],
             rename_mode: false,
@@ -92,6 +102,14 @@ impl TuiAppState {
     pub fn reset_persisted_chat(&mut self) {
         self.persisted_chat_rows = 0;
         self.persisted_chat_width = 0;
+    }
+
+    /// True while a resize is still in flight — a resize arrived within the
+    /// last `RESIZE_DEBOUNCE`, so scrollback persistence should wait to avoid
+    /// re-emitting the whole transcript on every intermediate width.
+    pub fn resize_settling(&self) -> bool {
+        self.resize_pending
+            .is_some_and(|at| at.elapsed() < RESIZE_DEBOUNCE)
     }
 
     pub fn scroll_transcript_up(&mut self) {
@@ -166,6 +184,26 @@ mod tests {
         assert!(state.history_sessions.is_empty());
         assert_eq!(state.history_cursor, 0);
         assert_eq!(state.slash_cursor, 0);
+    }
+
+    #[test]
+    fn resize_settling_true_immediately_after_resize() {
+        let mut state = TuiAppState::default();
+        state.resize_pending = Some(Instant::now());
+        assert!(state.resize_settling());
+    }
+
+    #[test]
+    fn resize_settling_false_after_debounce_window() {
+        let mut state = TuiAppState::default();
+        state.resize_pending = Some(Instant::now() - Duration::from_secs(1));
+        assert!(!state.resize_settling());
+    }
+
+    #[test]
+    fn resize_settling_false_when_no_resize_pending() {
+        let state = TuiAppState::default();
+        assert!(!state.resize_settling());
     }
 
     #[test]
