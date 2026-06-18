@@ -18,6 +18,7 @@ use tokio::sync::mpsc;
 
 use self::channels::process_channels;
 use self::handlers::handle_key_history;
+use self::handlers::handle_key_logs;
 use self::handlers::handle_key_normal;
 use self::handlers::handle_key_slash;
 use self::handlers::handle_mouse;
@@ -99,6 +100,8 @@ pub async fn run(mut terminal: DefaultTerminal, locus: &mut Locus) -> color_eyre
                     .await?
                 } else if app_state.history_mode {
                     handle_key_history(key.code, &mut app_state, locus)?
+                } else if app_state.logs_mode {
+                    handle_key_logs(key.code, &mut app_state)?
                 } else {
                     handle_key_normal(
                         key,

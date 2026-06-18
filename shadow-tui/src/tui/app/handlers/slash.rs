@@ -28,6 +28,7 @@ enum SlashAction {
     New,
     Delete,
     History,
+    Logs,
     Ingest,
     Reflect,
     Rename,
@@ -46,6 +47,7 @@ impl SlashAction {
             "/rename" => Self::Rename,
             "/exit" => Self::Exit,
             "/history" => Self::History,
+            "/logs" => Self::Logs,
             "/memory" => Self::Memory,
             _ => Self::Unknown,
         }
@@ -164,6 +166,7 @@ async fn run_action(
         SlashAction::New => handle_action_new(app_state, locus),
         SlashAction::Delete => handle_action_delete(locus)?,
         SlashAction::History => handle_action_history(app_state, locus),
+        SlashAction::Logs => handle_action_logs(app_state, locus),
         SlashAction::Ingest => handle_action_ingest(app_state, locus),
         SlashAction::Reflect => handle_action_reflect(app_state, locus, reflect_tx).await?,
         SlashAction::Rename => handle_action_rename(app_state, locus, input_buf),
@@ -216,6 +219,15 @@ fn handle_action_history(app_state: &mut TuiAppState, locus: &mut Locus) {
         app_state.history_sessions = sessions;
         app_state.history_mode = true;
         app_state.history_cursor = 0;
+        app_state.reset_persisted_chat();
+    }
+}
+
+fn handle_action_logs(app_state: &mut TuiAppState, locus: &mut Locus) {
+    if let Ok(logs) = locus.list_logs(Some(100)) {
+        app_state.log_entries = logs;
+        app_state.logs_mode = true;
+        app_state.logs_cursor = 0;
         app_state.reset_persisted_chat();
     }
 }

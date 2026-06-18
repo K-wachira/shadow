@@ -32,6 +32,7 @@ use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
 use shadow_core::model::ToolCall;
 use shadow_core::model::ToolState;
+use shadow_services::models::EntryLog;
 use shadow_utils::color;
 use shadow_utils::utils::format_timestamp;
 use shadow_utils::utils::truncate;
@@ -44,6 +45,11 @@ enum Segment {
 pub fn render_chat(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus) {
     if tui_state.history_mode {
         render_session_list(f, area, tui_state, locus);
+        return;
+    }
+
+    if tui_state.logs_mode {
+        render_logs_list(f, area, tui_state);
         return;
     }
 
@@ -385,16 +391,10 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus
         return;
     }
 
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
-        .split(area);
-
     let items: Vec<ListItem> = sessions
         .iter()
         .map(|session| {
             ListItem::new(Line::from(format!(
-                // "{:<30} {}  tkns: {}",
                 "{:<42} {:<42} tkns: {}",
                 truncate(&session.title, 30),
                 format_timestamp(&session.created_at_ms.to_string()),
@@ -403,48 +403,27 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus
         })
         .collect();
 
-    let list = List::new(items)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::DarkGray))
-                .title(Span::styled(
-                    " sessions  (↑↓/jk · Enter load · d delete · Esc cancel) ",
-                    color::dim(),
-                )),
-        )
-        .style(color::dim())
-        .highlight_style(
-            Style::default()
-                .fg(Color::Black)
-                .bg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        );
+    let preview = session_preview_lines(tui_state, locus);
 
-    // A fresh ListState each frame: the List widget scrolls its own offset so
-    // the selected row stays visible, so we don't track scroll position here.
-    let mut state = ListState::default();
-    state.select(Some(tui_state.history_cursor));
-    f.render_stateful_widget(list, chunks[0], &mut state);
-
-    render_session_preview(f, chunks[1], tui_state, locus);
+    render_list_with_preview(
+        f,
+        area,
+        " sessions  (↑↓/jk · Enter load · d delete · Esc cancel) ",
+        items,
+        tui_state.history_cursor,
+        preview,
+    );
 }
 
-/// Right-hand pane: the transcript of the session currently highlighted in the
-/// history list. Loads on every frame — cheap against local SQLite while the
-/// popup is open; cache on cursor-move if it ever feels sluggish.
-fn render_session_preview(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus) {
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::DarkGray))
-        .title(Span::styled(" preview ", color::dim()));
-
+/// Transcript of the highlighted session. Loads on every frame — cheap against
+/// local SQLite while the popup is open; cache on cursor-move if it ever feels
+/// sluggish.
+fn session_preview_lines(tui_state: &TuiAppState, locus: &mut Locus) -> Vec<Line<'static>> {
     let Some(session) = tui_state.history_sessions.get(tui_state.history_cursor) else {
-        f.render_widget(block, area);
-        return;
+        return vec![];
     };
 
-    let lines: Vec<Line> = match locus.load_session(session.id) {
+    match locus.load_session(session.id) {
         Ok(messages) if !messages.is_empty() => messages
             .iter()
             .flat_map(|m| {
@@ -466,14 +445,126 @@ fn render_session_preview(f: &mut Frame, area: Rect, tui_state: &TuiAppState, lo
             format!("  failed to load preview: {}", e),
             color::error_style(),
         ))],
-    };
+    }
+}
+
+fn render_logs_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState) {
+    let logs = &tui_state.log_entries;
+
+    if logs.is_empty() {
+        let line = Line::from(Span::styled("  no logs found", color::dim()));
+        f.render_widget(Paragraph::new(line), area);
+        return;
+    }
+
+    let items: Vec<ListItem> = logs
+        .iter()
+        .map(|log| {
+            ListItem::new(Line::from(format!(
+                "{:<22} {}",
+                format_timestamp(&log.time_stamp),
+                truncate(log.content.lines().next().unwrap_or(""), 60),
+            )))
+        })
+        .collect();
+
+    let preview = logs
+        .get(tui_state.logs_cursor)
+        .map(log_preview_lines)
+        .unwrap_or_default();
+
+    render_list_with_preview(
+        f,
+        area,
+        " logs  (↑↓/jk · Esc cancel) ",
+        items,
+        tui_state.logs_cursor,
+        preview,
+    );
+}
+
+/// Full content + metadata of the highlighted log. Logs are already in memory
+/// (`list_logs` returns the whole entry), so no DB round-trip is needed here.
+fn log_preview_lines(log: &EntryLog) -> Vec<Line<'static>> {
+    let mut lines = vec![
+        Line::from(Span::styled(
+            format_timestamp(&log.time_stamp),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+    ];
+    lines.extend(log.content.lines().map(|l| Line::from(l.to_string())));
+
+    let mut meta = Vec::new();
+    if let Some(m) = log.mood {
+        meta.push(format!("mood: {m}"));
+    }
+    if let Some(e) = log.energy {
+        meta.push(format!("energy: {e}"));
+    }
+    if let Some(w) = &log.weather {
+        meta.push(format!("weather: {w}"));
+    }
+    if let Some(l) = &log.location {
+        meta.push(format!("location: {l}"));
+    }
+    if let Some(d) = &log.device {
+        meta.push(format!("device: {d}"));
+    }
+    if let Some(t) = &log.log_type {
+        meta.push(format!("type: {t}"));
+    }
+    if !meta.is_empty() {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(meta.join("  ·  "), color::dim())));
+    }
+
+    lines
+}
+
+/// Shared layout for the "scrolling list on the left, preview on the right"
+/// popups (history, logs). Callers reduce their own data to formatted rows and
+/// preview lines; this owns the split, the scrolling list, and the preview pane.
+fn render_list_with_preview(
+    f: &mut Frame, area: Rect, title: &str, items: Vec<ListItem<'static>>, cursor: usize,
+    preview: Vec<Line<'static>>,
+) {
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
+        .split(area);
+
+    let list = List::new(items)
+        .block(popup_block(title))
+        .style(color::dim())
+        .highlight_style(
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        );
+
+    // A fresh ListState each frame: the List widget scrolls its own offset so
+    // the selected row stays visible, so we don't track scroll position here.
+    let mut state = ListState::default();
+    state.select(Some(cursor));
+    f.render_stateful_widget(list, chunks[0], &mut state);
 
     f.render_widget(
-        Paragraph::new(lines)
+        Paragraph::new(preview)
             .wrap(Wrap { trim: false })
-            .block(block),
-        area,
+            .block(popup_block(" preview ")),
+        chunks[1],
     );
+}
+
+fn popup_block(title: &str) -> Block<'static> {
+    Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::DarkGray))
+        .title(Span::styled(title.to_string(), color::dim()))
 }
 
 fn tool_to_lines(tool: &ToolCall, pad: &str, tick: u64) -> Vec<Line<'static>> {

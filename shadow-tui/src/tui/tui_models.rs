@@ -1,5 +1,6 @@
 use shadow_core::db::Sessions;
 use shadow_core::model::AssistantState;
+use shadow_services::models::EntryLog;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::time::Instant;
@@ -54,6 +55,9 @@ pub struct TuiAppState {
     pub history_mode: bool,  // navigating session list
     pub history_sessions: Vec<Sessions>,
     pub history_cursor: usize,
+    pub logs_mode: bool, // browsing ingested logs
+    pub log_entries: Vec<EntryLog>,
+    pub logs_cursor: usize,
     pub slash_cursor: usize,
     pub last_tick: Instant,
     pub memory_focus: Option<usize>,
@@ -85,6 +89,9 @@ impl Default for TuiAppState {
             slash_input: String::new(), // what's been typed after "/"
             history_sessions: vec![],
             history_cursor: 0,
+            logs_mode: false,
+            log_entries: vec![],
+            logs_cursor: 0,
             slash_cursor: 0,
             cancel_token: CancellationToken::new(),
             last_tick: Instant::now(),
@@ -138,6 +145,10 @@ pub const SLASH_COMMANDS: &[SlashCommand] = &[
     SlashCommand {
         name: "/history",
         description: "list past sessions",
+    },
+    SlashCommand {
+        name: "/logs",
+        description: "browse ingested logs",
     },
     SlashCommand {
         name: "/reflect",
