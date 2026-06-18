@@ -140,8 +140,8 @@ User corrections carry higher confidence than inferred beliefs.
 
 - [x] V1 — Models, DB, ingestion, CLI
 - [x] V2 — Ollama integration, streaming, markdown rendering
-- [ ] V2.5 — TUI completion, slash commands (`/ingest`, `/clear`, `/mood`)
-- [ ] V3 — Embeddings, entity extraction, knowledge graph (`sqlite-vec`)
+- [x] V2.5 — TUI completion, slash commands (`/ingest`, `/clear`, `/mood`)
+- [x] V3 — Embeddings, entity extraction, knowledge graph (`sqlite-vec`)
 - [ ] V4 — Full chat interface, `/loop` command for recurring prompts
 
 ## Hardware
