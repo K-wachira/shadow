@@ -13,6 +13,7 @@ use shadow_core::locus::Locus;
 use shadow_core::model::AssistantState;
 use std::path::PathBuf;
 use std::time::Duration;
+use std::time::Instant;
 use tokio::sync::mpsc;
 
 use self::channels::process_channels;
@@ -54,7 +55,17 @@ pub async fn run(mut terminal: DefaultTerminal, locus: &mut Locus) -> color_eyre
         update_tick(&mut app_state);
         update_assistant_state(&mut app_state);
         sync_input_state(&mut app_state, &input_buf);
-        persist_chat_scrollback(&mut terminal, &mut app_state, locus)?;
+
+        // Defer scrollback persistence while the terminal is actively resizing
+        // — each intermediate width would otherwise re-emit the whole
+        // transcript. Once resizes settle, reset once and re-emit at the new
+        // width.
+        if !app_state.resize_settling() {
+            if app_state.resize_pending.take().is_some() {
+                app_state.reset_persisted_chat();
+            }
+            persist_chat_scrollback(&mut terminal, &mut app_state, locus)?;
+        }
 
         if let Err(e) = terminal.draw(|f| render(f, &app_state, locus)) {
             if !e.to_string().contains("cursor position") {
@@ -106,7 +117,7 @@ pub async fn run(mut terminal: DefaultTerminal, locus: &mut Locus) -> color_eyre
             }
             Event::Resize(..) => {
                 terminal.autoresize()?;
-                app_state.reset_persisted_chat();
+                app_state.resize_pending = Some(Instant::now());
                 app_state.scroll_offset = 0;
                 false
             }
