@@ -21,6 +21,9 @@ use ratatui::text::Span;
 use ratatui::widgets::Block;
 use ratatui::widgets::Borders;
 use ratatui::widgets::Clear;
+use ratatui::widgets::List;
+use ratatui::widgets::ListItem;
+use ratatui::widgets::ListState;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Widget;
 use ratatui::widgets::Wrap;
@@ -374,79 +377,101 @@ fn message_to_lines(msg: &Message, tick: u64, total_area: Rect) -> Vec<Line<'sta
 }
 
 fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus) {
-    let history_sessions = match locus.list_sessions(30) {
-        Ok(sessions) => sessions,
-        Err(e) => {
-            let line = Line::from(Span::styled(
-                format!("  failed to load sessions: {}", e),
-                color::error_style(),
-            ));
-            f.render_widget(Paragraph::new(line), area);
-            return;
-        }
-    };
+    let sessions = &tui_state.history_sessions;
 
-    if history_sessions.is_empty() {
+    if sessions.is_empty() {
         let line = Line::from(Span::styled("  no sessions found", color::dim()));
         f.render_widget(Paragraph::new(line), area);
         return;
     }
 
-    let items: Vec<Line> = history_sessions
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
+        .split(area);
+
+    let items: Vec<ListItem> = sessions
         .iter()
-        .enumerate()
-        .map(|(i, session)| {
-            let title = if session.title.len() > 40 {
-                format!("{}…", &session.title[..40])
-            } else {
-                session.title.clone()
-            };
-
-            let context_len = format!("tkns: {}", session.context_tokens);
-
-            if i == tui_state.history_cursor {
-                Line::from(vec![
-                    Span::raw("  "),
-                    Span::styled(
-                        format!(
-                            "{:<42} {:<42} {}",
-                            title,
-                            format_timestamp(&session.created_at_ms.to_string()),
-                            context_len
-                        ),
-                        Style::default()
-                            .fg(Color::Black)
-                            .bg(Color::Cyan)
-                            .add_modifier(Modifier::BOLD),
-                    ),
-                ])
-            } else {
-                Line::from(vec![
-                    Span::raw("  "),
-                    Span::styled(
-                        format!(
-                            "{:<42} {:<42} {}",
-                            title,
-                            format_timestamp(&session.created_at_ms.to_string()),
-                            context_len
-                        ),
-                        color::dim(),
-                    ),
-                ])
-            }
+        .map(|session| {
+            ListItem::new(Line::from(format!(
+                // "{:<30} {}  tkns: {}",
+                "{:<42} {:<42} tkns: {}",
+                truncate(&session.title, 30),
+                format_timestamp(&session.created_at_ms.to_string()),
+                session.context_tokens,
+            )))
         })
         .collect();
 
-    f.render_widget(
-        Paragraph::new(items).block(
+    let list = List::new(items)
+        .block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::DarkGray))
                 .title(Span::styled(
-                    " sessions  (↑↓ or j/k to navigate · Enter to load · d to delete · Esc to cancel) ",
+                    " sessions  (↑↓/jk · Enter load · d delete · Esc cancel) ",
                     color::dim(),
                 )),
-        ),
+        )
+        .style(color::dim())
+        .highlight_style(
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        );
+
+    // A fresh ListState each frame: the List widget scrolls its own offset so
+    // the selected row stays visible, so we don't track scroll position here.
+    let mut state = ListState::default();
+    state.select(Some(tui_state.history_cursor));
+    f.render_stateful_widget(list, chunks[0], &mut state);
+
+    render_session_preview(f, chunks[1], tui_state, locus);
+}
+
+/// Right-hand pane: the transcript of the session currently highlighted in the
+/// history list. Loads on every frame — cheap against local SQLite while the
+/// popup is open; cache on cursor-move if it ever feels sluggish.
+fn render_session_preview(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus: &mut Locus) {
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::DarkGray))
+        .title(Span::styled(" preview ", color::dim()));
+
+    let Some(session) = tui_state.history_sessions.get(tui_state.history_cursor) else {
+        f.render_widget(block, area);
+        return;
+    };
+
+    let lines: Vec<Line> = match locus.load_session(session.id) {
+        Ok(messages) if !messages.is_empty() => messages
+            .iter()
+            .flat_map(|m| {
+                let style = match m.role.as_str() {
+                    "assistant" => Style::default().fg(Color::Cyan),
+                    _ => color::dim(),
+                };
+                let mut out = vec![Line::from(Span::styled(
+                    format!("{}:", m.role),
+                    style.add_modifier(Modifier::BOLD),
+                ))];
+                out.extend(m.content.lines().map(|l| Line::from(l.to_string())));
+                out.push(Line::from(""));
+                out
+            })
+            .collect(),
+        Ok(_) => vec![Line::from(Span::styled("  (empty session)", color::dim()))],
+        Err(e) => vec![Line::from(Span::styled(
+            format!("  failed to load preview: {}", e),
+            color::error_style(),
+        ))],
+    };
+
+    f.render_widget(
+        Paragraph::new(lines)
+            .wrap(Wrap { trim: false })
+            .block(block),
         area,
     );
 }
