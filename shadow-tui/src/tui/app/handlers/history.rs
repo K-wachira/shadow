@@ -52,6 +52,16 @@ pub fn handle_key_history(
             let max = app_state.history_sessions.len().saturating_sub(1);
             app_state.history_cursor = (app_state.history_cursor + 1).min(max);
         }
+        KeyCode::Delete | KeyCode::Char('d') => {
+            if let Some(selected) = app_state.history_sessions.get(app_state.history_cursor) {
+                let selected_id = selected.id;
+                locus.delete_session(selected_id)?;
+                app_state.history_sessions.remove(app_state.history_cursor);
+                let max = app_state.history_sessions.len().saturating_sub(1);
+                app_state.history_cursor = app_state.history_cursor.min(max);
+                app_state.reset_persisted_chat();
+            }
+        }
         _ => {}
     }
     Ok(false)

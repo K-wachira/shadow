@@ -443,7 +443,7 @@ fn render_session_list(f: &mut Frame, area: Rect, tui_state: &TuiAppState, locus
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::DarkGray))
                 .title(Span::styled(
-                    " sessions  (↑↓ or j/k to navigate · Enter to load · Esc to cancel) ",
+                    " sessions  (↑↓ or j/k to navigate · Enter to load · d to delete · Esc to cancel) ",
                     color::dim(),
                 )),
         ),
