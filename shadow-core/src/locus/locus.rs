@@ -159,16 +159,11 @@ impl Locus {
         });
     }
 
-    pub fn delete_current_session(&mut self) -> color_eyre::Result<()> {
-        if self.session_id != 0 {
-            self.db.delete_session(self.session_id)?;
+    pub fn delete_session(&mut self, session_id: i64) -> color_eyre::Result<()> {
+        self.db.delete_session(session_id)?;
+        if session_id == self.session_id {
+            self.start_new_session();
         }
-        self.session_id = 0;
-        self.session_name = "Untitled Session".to_string();
-        self.assistant_state = AssistantState::Idle;
-        self.messages.clear();
-        self.messages
-            .push(Message::logo(&self.llm_client.model_name));
         Ok(())
     }
 

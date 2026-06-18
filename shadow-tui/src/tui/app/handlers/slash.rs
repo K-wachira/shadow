@@ -207,7 +207,7 @@ fn handle_action_new(app_state: &mut TuiAppState, locus: &mut Locus) {
 }
 
 fn handle_action_delete(locus: &mut Locus) -> color_eyre::Result<()> {
-    locus.delete_current_session()?;
+    locus.delete_session(locus.session_id)?;
     locus.messages = locus.messages.clone();
     Ok(())
 }
