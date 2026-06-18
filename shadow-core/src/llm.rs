@@ -1,5 +1,4 @@
 use crate::config::Config;
-use color_eyre::eyre::eyre;
 use futures::Stream;
 use futures::StreamExt;
 use reqwest::Client;
@@ -138,6 +137,74 @@ struct ChatMessageResponse {
     tool_calls: Vec<ChatToolCall>,
 }
 
+/// Maximum agentic tool-call rounds before the streamed tool loop gives up.
+const MAX_TOOL_ROUNDS: usize = 8;
+
+/// Tracks whether any visible (non-whitespace) content has streamed yet, so the
+/// leading blank padding some models emit before real output can be dropped.
+#[derive(Default)]
+struct VisibleContent {
+    seen_visible: bool,
+}
+
+impl VisibleContent {
+    /// Returns the content to stream, or `None` if it should be suppressed.
+    fn filter<'a>(&mut self, content: &'a str) -> Option<&'a str> {
+        if content.is_empty() || (!self.seen_visible && content.trim().is_empty()) {
+            return None;
+        }
+        if content.chars().any(|c| !c.is_whitespace()) {
+            self.seen_visible = true;
+        }
+        Some(content)
+    }
+}
+
+/// Parse an OpenAI-style SSE response into decoded chat chunks: split on blank
+/// lines, strip the `data:` prefix, drop `[DONE]` and keep-alive events, and
+/// yield each `ChatResponse` that decodes. Undecodable events are logged and
+/// skipped; a transport error ends the stream.
+fn sse_chat_chunks(response: reqwest::Response) -> impl Stream<Item = ChatResponse> + Send {
+    async_stream::stream! {
+        let mut byte_stream = response.bytes_stream();
+        let mut pending = String::new();
+
+        while let Some(next) = byte_stream.next().await {
+            let chunk = match next {
+                Ok(chunk) => chunk,
+                Err(err) => {
+                    tracing::error!("stream chunk failed: {}", err);
+                    break;
+                }
+            };
+
+            pending.push_str(&String::from_utf8_lossy(&chunk));
+            pending = pending.replace("\r\n", "\n").replace('\r', "\n");
+
+            while let Some(boundary) = pending.find("\n\n") {
+                let event = pending[..boundary].to_string();
+                pending.drain(..boundary + 2);
+
+                let data = event
+                    .lines()
+                    .filter_map(|l| l.strip_prefix("data:"))
+                    .map(str::trim)
+                    .collect::<Vec<_>>()
+                    .join("\n");
+
+                if data.is_empty() || data == "[DONE]" {
+                    continue;
+                }
+
+                match serde_json::from_str::<ChatResponse>(&data) {
+                    Ok(chunk) => yield chunk,
+                    Err(err) => tracing::debug!("ignoring non-chat stream event: {}", err),
+                }
+            }
+        }
+    }
+}
+
 impl LlmClient {
     pub fn init(config: &Config) -> color_eyre::Result<Self> {
         Ok(Self {
@@ -191,133 +258,14 @@ impl LlmClient {
             .unwrap_or_default())
     }
 
-    pub async fn llm_ask_with_tools(&self, messages: &[ChatMessage]) -> color_eyre::Result<String> {
-        if self.tool_registry.is_empty() {
-            return self.llm_ask(messages).await;
-        }
-
-        let tools = self.tool_registry.schemas();
-        let mut history = messages.to_vec();
-
-        for _ in 0..8 {
-            let response = self
-                .request_builder()
-                .json(&ChatRequest {
-                    model: &self.model_name,
-                    messages: &history,
-                    stream: false,
-                    tools: Some(&tools),
-                    tool_choice: Some("auto"),
-                })
-                .send()
-                .await?
-                .error_for_status()?
-                .json::<ChatResponse>()
-                .await?;
-
-            let message = response
-                .choices
-                .first()
-                .and_then(|choice| choice.message.clone())
-                .ok_or_else(|| eyre!("model returned no assistant message"))?;
-
-            if message.tool_calls.is_empty() {
-                return Ok(message.content.unwrap_or_default());
-            }
-
-            history.push(ChatMessage::from_response(message.clone()));
-
-            for call in &message.tool_calls {
-                let tool_output = match self.tool_registry.execute(call).await {
-                    Ok(output) => output,
-                    Err(err) => format!("Tool error: {err}"),
-                };
-                history.push(ChatMessage::tool_result(call, tool_output));
-            }
-        }
-
-        Err(eyre!("tool loop exceeded 8 rounds without a final answer"))
-    }
-
     pub async fn llm_ask_stream(&self, messages: &[ChatMessage]) -> color_eyre::Result<LlmStream> {
-        tracing::debug!(">>> sending to {}", self.chat_url());
-        let mut byte_stream = self
-            .request_builder()
-            .json(&ChatRequest {
-                model: &self.model_name,
-                messages,
-                stream: true,
-                tools: None,
-                tool_choice: None,
-            })
-            .send()
-            .await?
-            .error_for_status()?
-            .bytes_stream();
-
-        tracing::debug!(">>> sent to {}", self.chat_url());
-        let stream = async_stream::stream! {
-            let mut pending = String::new();
-            let mut seen_visible = false;
-
-            while let Some(Ok(chunk)) = byte_stream.next().await {
-                pending.push_str(&String::from_utf8_lossy(&chunk));
-                pending = pending.replace("\r\n", "\n").replace('\r', "\n");
-
-                while let Some(boundary) = pending.find("\n\n") {
-                    let event = pending[..boundary].to_string();
-                    pending.drain(..boundary + 2);
-
-                    let data = event
-                        .lines()
-                        .filter_map(|l| l.strip_prefix("data:"))
-                        .map(str::trim)
-                        .collect::<Vec<_>>()
-                        .join("\n");
-
-                    if data.is_empty() || data == "[DONE]" {
-                        continue;
-                    }
-
-                    if let Ok(chunk) = serde_json::from_str::<ChatResponse>(&data) {
-                        if let Some(content) = chunk
-                            .choices
-                            .first()
-                            .and_then(|c| c.delta.as_ref())
-                            .and_then(|d| d.content.clone())
-                        {
-                            if content.is_empty() {
-                                continue;
-                            }
-                            if !seen_visible && content.trim().is_empty() {
-                                continue;
-                            }
-                            if content.chars().any(|c| !c.is_whitespace()) {
-                                seen_visible = true;
-                            }
-                            yield content;
-                        }
-                    }
-                }
-            }
-        };
-        Ok(Box::pin(stream))
-    }
-
-    pub async fn llm_ask_stream_with_tools(
-        &self, messages: &[ChatMessage],
-    ) -> color_eyre::Result<LlmStream> {
-        if self.tool_registry.is_empty() {
-            return self.llm_ask_stream(messages).await;
-        }
-
         let llm = self.clone();
         let initial_history = messages.to_vec();
         let stream = async_stream::stream! {
             let tools = llm.tool_registry.schemas();
             let mut history = initial_history;
 
-            for round in 0..8 {
+            for round in 0..MAX_TOOL_ROUNDS {
                 tracing::debug!(">>> sending streamed tool turn {} to {}", round + 1, llm.chat_url());
                 let send_result = llm
                     .request_builder()
@@ -331,87 +279,36 @@ impl LlmClient {
                     .send()
                     .await;
 
-                let mut byte_stream = match send_result {
-                    Ok(response) => match response.error_for_status() {
-                        Ok(response) => response.bytes_stream(),
-                        Err(err) => {
-                            tracing::error!("streamed tool request failed: {}", err);
-                            break;
-                        }
-                    },
+                let response = match send_result.and_then(|r| r.error_for_status()) {
+                    Ok(response) => response,
                     Err(err) => {
-                        tracing::error!("streamed tool send failed: {}", err);
+                        tracing::error!("streamed tool request failed: {}", err);
                         break;
                     }
                 };
 
-                let mut pending = String::new();
-                let mut seen_visible = false;
+                let mut chunks = Box::pin(sse_chat_chunks(response));
+                let mut visible = VisibleContent::default();
                 let mut assistant_message = ChatMessageResponse::empty();
 
-                while let Some(next_chunk) = byte_stream.next().await {
-                    let chunk = match next_chunk {
-                        Ok(chunk) => chunk,
-                        Err(err) => {
-                            tracing::error!("streamed tool chunk failed: {}", err);
-                            return;
-                        }
+                while let Some(chunk) = chunks.next().await {
+                    // Streaming servers emit `delta`; some send a full `message`.
+                    let Some(part) = chunk
+                        .choices
+                        .first()
+                        .and_then(|c| c.delta.as_ref().or(c.message.as_ref()))
+                    else {
+                        continue;
                     };
 
-                    pending.push_str(&String::from_utf8_lossy(&chunk));
-                    pending = pending.replace("\r\n", "\n").replace('\r', "\n");
-
-                    while let Some(boundary) = pending.find("\n\n") {
-                        let event = pending[..boundary].to_string();
-                        pending.drain(..boundary + 2);
-
-                        let data = event
-                            .lines()
-                            .filter_map(|l| l.strip_prefix("data:"))
-                            .map(str::trim)
-                            .collect::<Vec<_>>()
-                            .join("\n");
-
-                        if data.is_empty() || data == "[DONE]" {
-                            continue;
+                    if let Some(content) = part.content.as_deref() {
+                        assistant_message.push_content(content);
+                        if let Some(text) = visible.filter(content) {
+                            yield text.to_string();
                         }
-
-                        let chunk = match serde_json::from_str::<ChatResponse>(&data) {
-                            Ok(chunk) => chunk,
-                            Err(err) => {
-                                tracing::debug!("ignoring non-chat stream event: {}", err);
-                                continue;
-                            }
-                        };
-
-                        if let Some(delta) = chunk.choices.first().and_then(|c| c.delta.as_ref()) {
-                            if let Some(content) = delta.content.as_deref() {
-                                assistant_message.push_content(content);
-                                if !content.is_empty() {
-                                    if !seen_visible && content.trim().is_empty() {
-                                        continue;
-                                    }
-                                    if content.chars().any(|c| !c.is_whitespace()) {
-                                        seen_visible = true;
-                                    }
-                                    yield content.to_string();
-                                }
-                            }
-
-                            if !delta.tool_calls.is_empty() {
-                                assistant_message.tool_calls.extend(delta.tool_calls.clone());
-                            }
-                        } else if let Some(message) = chunk.choices.first().and_then(|c| c.message.as_ref()) {
-                            if let Some(content) = message.content.as_deref() {
-                                assistant_message.push_content(content);
-                                if !content.is_empty() {
-                                    yield content.to_string();
-                                }
-                            }
-                            if !message.tool_calls.is_empty() {
-                                assistant_message.tool_calls.extend(message.tool_calls.clone());
-                            }
-                        }
+                    }
+                    if !part.tool_calls.is_empty() {
+                        assistant_message.tool_calls.extend(part.tool_calls.clone());
                     }
                 }
 

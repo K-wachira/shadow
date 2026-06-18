@@ -87,7 +87,7 @@ impl Locus {
         let llm_client = Arc::clone(&self.llm_client);
 
         let stream = async_stream::stream! {
-            match llm_client.llm_ask_stream_with_tools(&enriched).await {
+            match llm_client.llm_ask_stream(&enriched).await {
                 Ok(mut s) => {
                     while let Some(chunk) = s.next().await {
                         yield chunk;
