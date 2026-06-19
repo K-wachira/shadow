@@ -9,6 +9,7 @@ pub struct ShadowPaths {
     pub config: PathBuf,
     pub mind_skill: PathBuf,
     pub log: PathBuf,
+    pub identity: PathBuf,
 }
 
 impl ShadowPaths {
@@ -22,6 +23,7 @@ impl ShadowPaths {
             mind_skill: root.join("skill/shadow_mind_skill.md"),
             config: root.join("config.toml"),
             log: root.join("shadow.log"),
+            identity: root.join("identity"),
         }
     }
 }
@@ -31,15 +33,15 @@ pub fn run_setup() -> color_eyre::Result<(Config, ShadowPaths)> {
     fs::create_dir_all(paths.db.parent().unwrap())?;
     fs::create_dir_all(paths.mind.parent().unwrap())?;
     fs::create_dir_all(paths.mind_skill.parent().unwrap())?;
+    fs::create_dir_all(&paths.identity)?;
 
     if !paths.config.exists() {
         fs::write(&paths.config, toml::to_string_pretty(&Config::default())?)?;
     }
     let config: Config = toml::from_str(&fs::read_to_string(&paths.config)?)?;
 
-    if !paths.mind.exists() {
-        fs::write(&paths.mind, "{\n  // shadow.mind\n}")?;
-    }
+    // The person-model file is created on first (sealed) save — no plaintext
+    // stub is written (INV-9).
     if !paths.mind_skill.exists() {
         fs::write(&paths.mind_skill, "{\n  ## shadow skill\n}")?;
     }

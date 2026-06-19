@@ -17,7 +17,6 @@ use shadow_core::model::Message;
 use shadow_core::model::ToolCall;
 use shadow_core::model::ToolPayload;
 use shadow_utils::utils::format_timestamp;
-use std::fs::read_to_string;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::mpsc;
@@ -249,9 +248,10 @@ pub fn handle_action_ingest(app_state: &mut TuiAppState, locus: &mut Locus) {
                 let mind = locus.mind.clone();
                 let llm = locus.llm_client.clone();
                 let mind_path = locus.paths.mind.clone();
+                let dek = locus.identity.dek.clone();
 
                 tokio::spawn(async move {
-                    process_ingested_logs(logs, mind, llm, mind_path).await;
+                    process_ingested_logs(logs, mind, llm, mind_path, dek).await;
                 });
             }
         }
@@ -267,6 +267,7 @@ async fn handle_action_reflect(
     let llm_client = Arc::clone(&locus.llm_client);
     let paths = locus.paths.clone();
     let current_mind = locus.mind.clone();
+    let dek = locus.identity.dek.clone();
 
     let token = CancellationToken::new();
     app_state.cancel_token = token.clone();
@@ -274,7 +275,7 @@ async fn handle_action_reflect(
 
     tokio::spawn(async move {
         tokio::select! {
-            result = reflect(llm_client, paths, current_mind, logs_json) => {
+            result = reflect(llm_client, paths, current_mind, logs_json, dek) => {
                 match result {
                     Ok(new_mind) => { let _ = reflect_tx.send(new_mind); }
                     Err(e) => tracing::error!("reflect error: {}", e),
@@ -297,7 +298,7 @@ fn handle_action_rename(app_state: &mut TuiAppState, locus: &mut Locus, input_bu
 fn handle_action_memory(app_state: &mut TuiAppState, locus: &mut Locus) {
     let path = locus.paths.mind.clone();
     let expanded = true;
-    match read_to_string(&path) {
+    match shadow_continuity::mind::read_text(&path, &locus.identity.dek) {
         Ok(raw) => match from_str::<serde_json::Value>(&raw) {
             Ok(value) => {
                 let tree = JsonTree::from_value(&value, expanded);

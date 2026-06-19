@@ -25,6 +25,7 @@ shadow-core = { path = "../shadow-core" }
 shadow-utils = { path = "../shadow-utils" }
 shadow-continuity = { path = "../shadow-continuity" }
 shadow-services = { path = "../shadow-services" }
+shadow-identity = { path = "../shadow-identity" }
 
 [features]
 hotpath = ["hotpath/hotpath"]

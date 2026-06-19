@@ -7,6 +7,8 @@ pub struct Config {
     pub llm_provider: CoreLLM,
     pub reflection: ReflectionConfig,
     pub ingest: IngestConfig,
+    #[serde(default)]
+    pub identity: IdentityConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -52,6 +54,27 @@ pub struct IngestConfig {
     pub source_path: PathBuf,
 }
 
+#[derive(Debug, Deserialize, Serialize, PartialEq, Default)]
+pub struct IdentityConfig {
+    /// How the device wrap key is unlocked.
+    #[serde(default)]
+    pub keystore: KeystoreBackend,
+    /// Refuse to start unless `SHADOW_PASSPHRASE` is set (i.e. forbid the
+    /// insecure dev fallback). Leave `false` for local dev.
+    #[serde(default)]
+    pub require_passphrase: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum KeystoreBackend {
+    /// Argon2id key from `SHADOW_PASSPHRASE` (with a dev fallback).
+    #[default]
+    Passphrase,
+    /// Touch ID / Secure Enclave — lands with P0.4.
+    SecureEnclave,
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -70,6 +93,7 @@ impl Default for Config {
                     "~/Library/Mobile Documents/com~apple~CloudDocs/ShadowLogs/",
                 ),
             },
+            identity: IdentityConfig::default(),
         }
     }
 }
@@ -201,5 +225,44 @@ mod tests {
     fn default_llamacpp_config() {
         let config = Llamacpp::default();
         assert_eq!(config.host, "http://127.0.0.1:8080");
+    }
+
+    #[test]
+    fn default_identity_config_uses_passphrase() {
+        let id = IdentityConfig::default();
+        assert_eq!(id.keystore, KeystoreBackend::Passphrase);
+        assert!(!id.require_passphrase);
+    }
+
+    #[test]
+    fn config_without_identity_section_still_parses() {
+        // configs predating [identity] must load via serde defaults
+        let toml = r#"
+[llm_provider]
+provider = "ollama"
+model_name = "x"
+base_url = "y"
+api_key = "z"
+
+[reflection]
+interval_minutes = 60
+min_new_logs = 5
+
+[ingest]
+source_path = "/tmp/logs"
+"#;
+        let cfg: Config = toml::from_str(toml).unwrap();
+        assert_eq!(cfg.identity, IdentityConfig::default());
+    }
+
+    #[test]
+    fn keystore_backend_serializes_snake_case() {
+        let s = toml::to_string(&IdentityConfig {
+            keystore: KeystoreBackend::SecureEnclave,
+            require_passphrase: true,
+        })
+        .unwrap();
+        assert!(s.contains("keystore = \"secure_enclave\""));
+        assert!(s.contains("require_passphrase = true"));
     }
 }

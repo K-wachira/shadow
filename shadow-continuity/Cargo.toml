@@ -12,3 +12,4 @@ serde_json = {version = "1.0"}
 color-eyre = "0.6.5"
 shadow-utils = { path = "../shadow-utils" }
 shadow-services = { path = "../shadow-services" }
+shadow-identity = { path = "../shadow-identity" }

@@ -1,7 +1,11 @@
 [workspace]
 members = [
     "shadow-core",
+    "shadow-continuity",
+    "shadow-identity",
+    "shadow-services",
     "shadow-tools",
     "shadow-tui",
+    "shadow-utils",
 ]
 resolver = "2"

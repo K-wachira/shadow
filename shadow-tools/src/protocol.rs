@@ -17,7 +17,7 @@ pub struct ToolFunctionSchema {
     pub parameters: Value,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ChatToolCall {
     #[serde(default)]
     pub id: Option<String>,
@@ -26,15 +26,34 @@ pub struct ChatToolCall {
     pub function: ChatToolFunctionCall,
 }
 
+impl Default for ChatToolCall {
+    fn default() -> Self {
+        Self {
+            id: None,
+            r#type: function_type(),
+            function: ChatToolFunctionCall::default(),
+        }
+    }
+}
+
 fn function_type() -> String {
     "function".into()
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ChatToolFunctionCall {
     pub name: String,
     #[serde(default)]
     pub arguments: Value,
+}
+
+impl Default for ChatToolFunctionCall {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            arguments: Value::Object(serde_json::Map::new()),
+        }
+    }
 }
 
 type ToolHandler =
