@@ -3,6 +3,7 @@ use crate::config::Config;
 use crate::db::Database;
 use crate::db::SessionMessages;
 use crate::db::Sessions;
+use crate::identity::UnlockedIdentity;
 use crate::llm::ChatMessage;
 use crate::llm::LlmClient;
 use crate::locus::mind_op;
@@ -28,6 +29,7 @@ pub struct Locus {
     pub mind: ShadowMind,
     pub config: Config,
     pub paths: ShadowPaths,
+    pub identity: Arc<UnlockedIdentity>,
     pub context_tokens: i64,
     pub ephemeral: Option<String>,
 }
@@ -35,8 +37,9 @@ pub struct Locus {
 impl Locus {
     pub fn new(
         db: Arc<Database>, llm_client: Arc<LlmClient>, config: Config, paths: ShadowPaths,
+        identity: Arc<UnlockedIdentity>,
     ) -> color_eyre::Result<Self> {
-        let mind = mind::load(&paths.mind)?;
+        let mind = mind::load(&paths.mind, &identity.dek)?;
         let model_name_temp = llm_client.model_name.clone();
         Ok(Self {
             db,
@@ -48,6 +51,7 @@ impl Locus {
             mind,
             config,
             paths,
+            identity,
             context_tokens: 0,
             ephemeral: None,
         })
@@ -82,8 +86,8 @@ impl Locus {
             .insert_message(self.session_id, "user", prompt, None)?;
         self.assistant_state = AssistantState::Thinking { secs: 0 };
 
-        let enriched =
-            ask(&self.db, &self.messages, &self.paths).map_err(|e| color_eyre::eyre::eyre!(e))?;
+        let enriched = ask(&self.db, &self.messages, &self.paths, &self.identity.dek)
+            .map_err(|e| color_eyre::eyre::eyre!(e))?;
         let llm_client = Arc::clone(&self.llm_client);
 
         let stream = async_stream::stream! {

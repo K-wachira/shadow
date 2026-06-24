@@ -2,6 +2,7 @@ pub mod ask;
 pub mod commands;
 pub mod config;
 pub mod db;
+pub mod identity;
 pub mod json_tree;
 pub mod llm;
 pub mod locus;

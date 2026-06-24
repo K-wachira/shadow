@@ -87,8 +87,11 @@ mod tests {
 
     #[test]
     fn format_timestamp_parses_millis() {
-        // 2026-03-29 10:00:00 UTC = 1774927200000 ms
-        let result = format_timestamp("1774927200000");
+        // Derive epoch-millis from a known UTC instant so the constant can't drift.
+        let ms = chrono::DateTime::parse_from_rfc3339("2026-03-29T10:00:00Z")
+            .unwrap()
+            .timestamp_millis();
+        let result = format_timestamp(&ms.to_string());
         assert!(result.contains("2026-03-29"));
         assert!(result.contains("10:00"));
     }

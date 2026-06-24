@@ -24,4 +24,6 @@ reqwest = { version = "0.12", features = ["json", "stream"] }
 shadow-tools = { path = "../shadow-tools" }
 shadow-services = { path = "../shadow-services" }
 shadow-continuity = { path = "../shadow-continuity" }
+shadow-identity = { path = "../shadow-identity" }
 shadow-utils = { path = "../shadow-utils" }
+zeroize = "1"

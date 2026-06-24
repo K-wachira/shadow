@@ -8,6 +8,7 @@ use json5::from_str;
 use shadow_core::locus::Locus;
 use shadow_core::model::Message;
 use shadow_core::model::MessageKind;
+use shadow_identity::OwnerRootKey;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -20,6 +21,7 @@ pub async fn handle_key_normal(
     tx: mpsc::UnboundedSender<String>, done_tx: mpsc::UnboundedSender<()>,
 ) -> color_eyre::Result<bool> {
     if let Some(focus_idx) = app_state.memory_focus {
+        let dek = locus.identity.dek.clone();
         let mut keep_cursor_visible = false;
         let mut scroll_transcript_up = false;
         let mut scroll_transcript_down = false;
@@ -60,7 +62,7 @@ pub async fn handle_key_normal(
 
                         if let Some(path) = app_state.memory_source_path.clone() {
                             let value = tree.to_value();
-                            if let Err(e) = persist_json_value(&path, &value) {
+                            if let Err(e) = persist_json_value(&path, &value, &dek) {
                                 *tree = tree_before;
                                 tracing::error!("failed to write shadow.mind: {}", e);
                                 return Ok(false);
@@ -222,13 +224,16 @@ pub async fn handle_key_normal(
     Ok(false)
 }
 
-fn persist_json_value(path: &Path, value: &serde_json::Value) -> color_eyre::Result<()> {
+fn persist_json_value(
+    path: &Path, value: &serde_json::Value, dek: &OwnerRootKey,
+) -> color_eyre::Result<()> {
     let content = json5::to_string(value)
         .or_else(|_| serde_json::to_string_pretty(value))
         .map_err(|e| color_eyre::eyre::eyre!(e))?;
 
+    let sealed = shadow_identity::Vault::new(dek).seal(content.as_bytes())?;
     let tmp = temp_path_for(path);
-    std::fs::write(&tmp, content)?;
+    std::fs::write(&tmp, sealed)?;
     std::fs::rename(&tmp, path)?;
     Ok(())
 }

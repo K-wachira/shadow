@@ -4,10 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 
 pub fn process_json_file(log_name: &String, dir: &PathBuf) -> color_eyre::Result<RawLog> {
-    let complete_path =
-        dirs::home_dir()
-            .unwrap()
-            .join(format!("{}{}", &dir.to_string_lossy(), &log_name));
+    let complete_path = dir.join(log_name);
 
     let content = std::fs::read_to_string(complete_path).map_err(|e| color_eyre::eyre::eyre!(e));
     let raw: RawLog = serde_json::from_str(&content?).map_err(|e| color_eyre::eyre::eyre!(e))?;

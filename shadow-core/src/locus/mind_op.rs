@@ -5,6 +5,7 @@ use crate::setup::ShadowPaths;
 use shadow_continuity::mind;
 use shadow_continuity::mind::Belief;
 use shadow_continuity::mind::ShadowMind;
+use shadow_identity::OwnerRootKey;
 use shadow_services::ingest::get_files;
 use shadow_services::models::EntryLog;
 use std::path::PathBuf;
@@ -13,6 +14,7 @@ const LOG_LIMIT: i32 = 30;
 
 pub async fn reflect(
     llm_client: Arc<LlmClient>, paths: ShadowPaths, current_mind: ShadowMind, logs_json: String,
+    dek: Arc<OwnerRootKey>,
 ) -> color_eyre::Result<ShadowMind> {
     let skill = std::fs::read_to_string(&paths.mind_skill)?;
     let today = chrono::Local::now().format("%Y-%m-%d");
@@ -44,13 +46,13 @@ pub async fn reflect(
     let new_mind: ShadowMind = json5::from_str(&full)
         .map_err(|e| color_eyre::eyre::eyre!("Failed to parse shadow.mind: {e}\nRaw:\n{full}"))?;
 
-    mind::save(&new_mind, &paths.mind)?;
+    mind::save(&new_mind, &paths.mind, &dek)?;
     Ok(new_mind)
 }
 
 // spawnable — no db access
 pub async fn reflect_with_input(
-    llm_client: Arc<LlmClient>, paths: ShadowPaths, db: &Database,
+    llm_client: Arc<LlmClient>, paths: ShadowPaths, db: &Database, dek: Arc<OwnerRootKey>,
 ) -> color_eyre::Result<ShadowMind> {
     let skill = std::fs::read_to_string(&paths.mind_skill)?;
     let logs_json = gather_reflect_input(db)?;
@@ -73,7 +75,7 @@ pub async fn reflect_with_input(
     let new_mind: ShadowMind = json5::from_str(&response)
         .map_err(|e| color_eyre::eyre::eyre!("Failed to parse shadow.mind: {}", e))?;
 
-    mind::save(&new_mind, &paths.mind)?;
+    mind::save(&new_mind, &paths.mind, &dek)?;
     Ok(new_mind)
 }
 
@@ -86,6 +88,7 @@ pub fn gather_reflect_input(db: &Database) -> color_eyre::Result<String> {
 
 pub async fn process_ingested_logs(
     logs: Vec<EntryLog>, mind: ShadowMind, llm: Arc<LlmClient>, mind_path: PathBuf,
+    dek: Arc<OwnerRootKey>,
 ) {
     for log in logs {
         match extract_affected_fields(&mind, &log, &llm).await {
@@ -127,7 +130,7 @@ pub async fn process_ingested_logs(
                         }
                     }
                 }
-                if let Err(e) = mind::save(&updated_mind, &mind_path) {
+                if let Err(e) = mind::save(&updated_mind, &mind_path, &dek) {
                     tracing::error!("failed to save mind: {}", e);
                 }
             }

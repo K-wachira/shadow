@@ -3,14 +3,15 @@ use crate::llm::ChatMessage;
 use crate::model::Message;
 use crate::model::MessageKind;
 use crate::setup::ShadowPaths;
+use shadow_identity::OwnerRootKey;
 use shadow_services::models::EntryLog;
 
 pub fn ask(
-    conn: &Database, curr_content: &[Message], paths: &ShadowPaths,
+    conn: &Database, curr_content: &[Message], paths: &ShadowPaths, dek: &OwnerRootKey,
 ) -> color_eyre::Result<Vec<ChatMessage>> {
     let logs = conn.get_logs(Some(100)).unwrap_or_default();
     let log_context = format_logs(logs);
-    let mind = std::fs::read_to_string(&paths.mind)?;
+    let mind = shadow_continuity::mind::read_text(&paths.mind, dek).unwrap_or_default();
 
     let system = format!(
         "You are Shadow, a personal assistant with access to the user's logs.\n\n\
